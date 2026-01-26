@@ -8,8 +8,6 @@ This is a configuration file for pytest containing customizations and fixtures.
 In VSCode, Code Coverage is recorded in config.xml. Delete this file to reset reporting.
 """
 
-from __future__ import annotations
-
 from typing import List
 
 import pytest

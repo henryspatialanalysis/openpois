@@ -5,9 +5,6 @@
 """This is a Sample Python file."""
 
 
-from __future__ import annotations
-
-
 def hello_world(i: int = 0) -> str:
     """Create hello world."""
     print("hello world")
