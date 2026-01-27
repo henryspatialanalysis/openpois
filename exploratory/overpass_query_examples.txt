@@ -1,0 +1,54 @@
+/* History of a node */
+timeline(node,7807736297);
+for (t["created"]) {
+  retro (_.val) {
+    node(7807736297);
+    out meta;
+  }
+}
+
+/* Timeline of a node */
+timeline(node,7807736297);
+out meta;
+
+/* Metadata for a node */
+node(441510760);
+out meta;
+
+/* List of nodes added or deleted during a time range */
+[out:xml][timeout:200]
+[adiff:"2025-01-07T00:00:00Z","2025-01-10T00:00:00Z"];
+nwr(47.41, -122.48, 47.79, -122.16);
+compare(delta:1);
+out ids;
+
+[out:xml][timeout:200]
+[diff:"2025-01-01T00:00:00Z","2025-01-31T00:00:00Z"];
+nwr(47.41, -122.48, 47.79, -122.16)["amenity"="restaurant"];
+compare(delta:1);
+out meta;
+
+/* Full query for a variety of amenities */
+[out:xml][timeout:1000]
+[date:"2025-01-01T00:00:00Z"];
+(
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="bicycle"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="books"];
+    nwr(47.41, -122.48, 47.79, -122.16)["amenity"="cafe"];
+    nwr(47.41, -122.48, 47.79, -122.16)["amenity"="community_centre"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="convenience"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="general"];
+    nwr(47.41, -122.48, 47.79, -122.16)["amenity"="dentist"];
+    nwr(47.41, -122.48, 47.79, -122.16)["healthcare"="dentist"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="supermarket"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="charity"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="second_hand"];
+    nwr(47.41, -122.48, 47.79, -122.16)["leisure"="playground"];
+    nwr(47.41, -122.48, 47.79, -122.16)["leisure"="fitness_centre"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="bakery"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="hardware"];
+    nwr(47.41, -122.48, 47.79, -122.16)["shop"="doityourself"];
+);
+out ids;
+
+

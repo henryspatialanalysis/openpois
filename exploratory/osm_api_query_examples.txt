@@ -1,0 +1,5 @@
+# Node that was deleted
+https://api.openstreetmap.org/api/0.6/node/7807736297/history
+
+# Node with changed metadata
+https://api.openstreetmap.org/api/0.6/node/441510760/history
