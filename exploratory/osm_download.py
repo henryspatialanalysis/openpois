@@ -163,16 +163,27 @@ def process_element(element_etree: ET.ElementTree) -> tuple[pd.DataFrame, pd.Dat
 
 versions_list = []
 changes_list = []
+failed_rows = []
 
 for idx, row in elements_table.iterrows():
     print(f"   Row {idx}: type={row['type']}, id={row['id']}")
     history_url = f"https://api.openstreetmap.org/api/0.6/{row['type']}/{row['id']}/history"
-    history_response = requests.get(history_url, timeout = TIMEOUT)
+    try:
+        history_response = requests.get(history_url, timeout = TIMEOUT)
+    except Exception as e:
+        print(f"Failed to get history for row {idx}: {e}")
+        failed_rows.append(row)
+        time.sleep(1)
+        continue
     history_etree = ET.fromstring(history_response.text)
     versions_df, changes_df = process_element(history_etree)
     versions_list.append(versions_df)
     changes_list.append(changes_df)
     if idx % 100 == 0:
         print(f"Processed {idx} rows")
-        pd.concat(versions_list).to_csv('osm_versions.csv', index = False)
-        pd.concat(changes_list).to_csv('osm_changes.csv', index = False)
+
+versions_df = pd.concat(versions_list)
+changes_df = pd.concat(changes_list)
+
+versions_df.to_csv('osm_versions.csv', index = False)
+changes_df.to_csv('osm_changes.csv', index = False)
