@@ -9,7 +9,12 @@ This script:
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
 import plotnine as gg
+
+from openpois.osm.change_plots import change_plot_create, change_multiplot_create
 
 # ----------------------------------------------------------------------------------------
 # Configuration constants
@@ -17,11 +22,35 @@ import plotnine as gg
 
 DATA_VERSION = "20260129"
 SAVE_DIR = Path("~/data/openpois").expanduser() / DATA_VERSION
+VIZ_DIR = SAVE_DIR / "viz"
 OSM_KEYS = ["amenity", "shop", "healthcare", "leisure"]
 TAG_KEY = "name"
 END_DATE = pd.Timestamp('2025-12-31', tz = 'UTC')
 
-max_days = 365*10
+max_days = 365 * 10
+VIZ_DIR.mkdir(parents = True, exist_ok = True)
+
+# ----------------------------------------------------------------------------------------
+# Plotting functions
+# ----------------------------------------------------------------------------------------
+
+def fig_save(
+    fig: gg.ggplot, stub: str, width: float = 10, height: float = 6, **kwargs
+) -> None:
+    """
+    Helper function to save a ggplot figure
+    """
+    fig.save(
+        filename = VIZ_DIR / f"{stub}.png",
+        width = width,
+        height = height,
+        units = 'in',
+        dpi = 300,
+        verbose = False,
+        **kwargs
+    )
+    return None
+
 
 # ----------------------------------------------------------------------------------------
 # Main workflow
@@ -29,6 +58,8 @@ max_days = 365*10
 
 if __name__ == "__main__":
     # Read observations
+    # Drop the first observation for each POI (when the POI was first added) - the last
+    #   observation timestamp will be missing for these rows
     timestamp_cols = ['obs_timestamp', 'last_obs_timestamp', 'last_tag_timestamp']
     observations_df = (pd.read_csv(SAVE_DIR / f"osm_observations_{TAG_KEY}.csv")
         .dropna(subset = timestamp_cols)
@@ -42,69 +73,56 @@ if __name__ == "__main__":
         ).astype(int)
     )
     # Prepare timediffs in days:
-    # t1: Time elapsed until the final confirmation of the previous tag
-    # t2: Time elapsed from previous tag to changed tag
+    # no_change: Time elapsed until the final confirmation of the previous tag
+    # change: Time elapsed from previous tag to changed tag
+    # final_obs: Time elapsed from previous tag to data download
     changed_tags = (observations_df
         .query('changed == 1')
         .assign(
-            t1 = (pd.col('last_obs_timestamp') - pd.col('last_tag_timestamp')).dt.days,
-            t2 = (pd.col('obs_timestamp') - pd.col('last_tag_timestamp')).dt.days,
-            t3 = np.inf # (END_DATE - pd.col('last_tag_timestamp')).dt.days
+            no_change = (
+                pd.col('last_obs_timestamp') - pd.col('last_tag_timestamp')
+            ).dt.days,
+            change = (pd.col('obs_timestamp') - pd.col('last_tag_timestamp')).dt.days,
+            final_obs = (END_DATE - pd.col('last_tag_timestamp')).dt.days
         )
     )
     unchanged_tags = (observations_df
         .query('(changed == 0) & (latest_version == 1)')
         .assign(
-            t1 = (pd.col('obs_timestamp') - pd.col('last_tag_timestamp')).dt.days,
-            t2 = np.inf, # (END_DATE - pd.col('last_tag_timestamp')).dt.days,
-            t3 = np.inf
+            no_change = (pd.col('obs_timestamp') - pd.col('last_tag_timestamp')).dt.days,
+            change = np.inf,
+            final_obs = (END_DATE - pd.col('last_tag_timestamp')).dt.days
         )
     )
     # Format changes
     to_plot_df = pd.concat([changed_tags, unchanged_tags])
-    # Create a plot
-    reshaped_df = (
-        pd.DataFrame({
-            'yes': [np.sum(day_i < to_plot_df['t1']) for day_i in range(max_days)],
-            'unknown': [
-                np.sum((to_plot_df['t1'] <= day_i) & (day_i < to_plot_df['t2']))
-                for day_i in range(max_days)
-            ],
-            'no': [
-                np.sum((to_plot_df['t2'] <= day_i) & (day_i < to_plot_df['t3']))
-                for day_i in range(max_days)
-            ],
-        })
-        .assign(
-            all = pd.col('yes') + pd.col('no') + pd.col('unknown'),
-            ymin = pd.col('yes') / pd.col('all'),
-            ymax = (pd.col('yes') + pd.col('unknown')) / pd.col('all'),
-            year = np.arange(max_days) / 365,
+    # Create a plot for all tags
+    fig = change_plot_create(
+        observations = to_plot_df,
+        no_change_col = 'no_change',
+        change_col = 'change',
+        final_observation_col = 'final_obs',
+        day_range = max_days,
+        title = f"Stability of the `{TAG_KEY}` tag over time",
+        x_label = "Years since tag",
+        y_label = "Proportion remaining unchanged",
+    )
+    fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all")
+
+    # Create multi-panel plots for the top tags in each OSM category
+    for subtype in OSM_KEYS:
+        fig = change_multiplot_create(
+            observations = to_plot_df,
+            col = subtype,
+            top_n = 9,
+            no_change_col = 'no_change',
+            change_col = 'change',
+            final_observation_col = 'final_obs',
+            day_range = max_days,
         )
-    )
-    fig = (
-        gg.ggplot(
-            reshaped_df,
-            gg.aes(x = 'year', ymin = 'ymin', ymax = 'ymax')) +
-        gg.geom_ribbon(fill = 'blue', alpha = 0.4) +
-        gg.geom_line(gg.aes(y = 'ymin'), color = 'black', alpha = 0.5) +
-        gg.geom_line(gg.aes(y = 'ymax'), color = 'black', alpha = 0.5) +
-        gg.labs(
-            x = "Years from tag",
-            y = "Proportion remaining unchanged",
-            title = f"Proportion of `{TAG_KEY}` tags unchanged over time"
-        ) +
-        gg.scale_y_continuous(
-            limits = (0, 1.01),
-            breaks = np.arange(0, 1, 0.25),
-            labels = [f"{x*100:.0f}%" for x in np.arange(0, 1, 0.25)]
-        ) +
-        gg.theme_bw()
-    )
-    fig.save(
-        SAVE_DIR / f"osm_observations_{TAG_KEY}.png",
-        width = 10,
-        height = 6,
-        units = 'in',
-        dpi = 300,
-    )
+        fig_save(
+            fig = fig,
+            stub = f"osm_changes_{TAG_KEY}_{subtype}",
+            height = 12,
+            width = 12
+        )
