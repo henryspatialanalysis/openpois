@@ -6,6 +6,10 @@ export_env:
 build_env:
 	@conda env create -f environment.yml;
 
+# Install the package to pip
+install_package:
+	@pip install -e .;
+
 # Convenience target to print all of the available targets in this file
 # From https://stackoverflow.com/questions/4219255
 .PHONY: list
