@@ -104,6 +104,10 @@ def change_plot_create(
             it was changed. For tags that were unchanged, this will be infinity.
         final_observation_col: Column name for the days elapsed from when the tag was
             added to when this data was downloaded.
+        title: Title of the plot.
+        subtitle: Subtitle of the plot.
+        x_label: Label for the x-axis.
+        y_label: Label for the y-axis.
         day_range: Maximum elapsed time period to plot, in days
 
     Returns:
@@ -122,9 +126,9 @@ def change_plot_create(
             data = reshaped,
             mapping = gg.aes(x = 'year', ymin = 'ymin', ymax = 'ymax')
         ) +
-        gg.geom_ribbon(fill = 'blue', alpha = 0.4) +
-        gg.geom_line(mapping = gg.aes(y = 'ymin'), color = 'black', alpha = 0.5) +
-        gg.geom_line(mapping = gg.aes(y = 'ymax'), color = 'black', alpha = 0.5) +
+        gg.geom_ribbon(fill = 'blue', alpha = 0.25) +
+        gg.geom_line(mapping = gg.aes(y = 'ymin'), color = 'black', linetype = 'dashed') +
+        gg.geom_line(mapping = gg.aes(y = 'ymax'), color = 'black') +
         gg.labs(
             title = title,
             subtitle = subtitle,
@@ -153,15 +157,31 @@ def change_multiplot_create(
     no_change_col: str = 'no_change',
     change_col: str = 'change',
     final_observation_col: str = 'final_obs',
+    title: str = None,
+    subtitle: str = None,
+    x_label: str = '',
+    y_label: str = '',
     day_range: int = 365*10,
 ) -> gg.ggplot:
     """
     Create a multi-panel change plot.
 
     Args:
-        col: Column name for the tag to plot.
+        observations: DataFrame with observations. Each row is an iteration of a
+            tag, with the three columns described below.
+        col: Column name for the OSM grouping tag to plot.
         top_n: Number of tags to plot, ordered by number of observations.
-        **kwargs: Keyword arguments for change_plot_create.
+        no_change_col: Column name for the days elapsed from when the tag was added to
+            when it was last confirmed (observed unchanged).
+        change_col: Column name for the days elapsed from when the tag was added to when
+            it was changed. For tags that were unchanged, this will be infinity.
+        final_observation_col: Column name for the days elapsed from when the tag was
+            added to when this data was downloaded.
+        title: Title of the plot.
+        subtitle: Subtitle of the plot.
+        x_label: Label for the x-axis.
+        y_label: Label for the y-axis.
+        day_range: Maximum elapsed time period to plot, in days
 
     Returns:
         ggplot object
@@ -171,24 +191,49 @@ def change_multiplot_create(
     obs_sub = observations.dropna(subset = [col])
     top_tags = obs_sub[col].value_counts().head(top_n)
     # Create a list of ggplot objects
-    fig_list = []
+    reshaped_list = []
     for tag, _ in top_tags.items():
         obs_sub_tag = obs_sub.query(f"{col} == @tag")
-        fig = change_plot_create(
-            observations = obs_sub_tag,
-            title = tag.title(),
-            subtitle = f"N = {obs_sub_tag.shape[0]}",
-            no_change_col = no_change_col,
-            change_col = change_col,
-            final_observation_col = final_observation_col,
-            day_range = day_range,
+        reshaped_sub = (
+            change_plot_reshape_data(
+                observations = obs_sub_tag,
+                no_change_col = no_change_col,
+                change_col = change_col,
+                final_observation_col = final_observation_col,
+                day_range = day_range
+            )
+            .assign(
+                group = tag.replace("_", " ").title() + f" (N = {obs_sub_tag.shape[0]})"
+            )
         )
-        fig_list.append(fig)
-    # Compose the individual plots into a roughly square grid
-    n_rows = np.ceil(np.sqrt(len(fig_list)))
-    composed_rows = [
-        reduce(lambda gg1, gg2: gg1 | gg2, row)
-        for row in np.array_split(fig_list, n_rows)
-    ]
-    composed_fig = reduce(lambda row1, row2: row1 / row2, composed_rows)
-    return composed_fig
+        reshaped_list.append(reshaped_sub)
+    # Create a grouped change plot
+    reshaped_full = pd.concat(reshaped_list)
+    year_range = day_range / 365
+    fig = (
+        gg.ggplot(
+            data = reshaped_full,
+            mapping = gg.aes(x = 'year', color = 'group')
+        ) +
+        gg.geom_line(mapping = gg.aes(y = 'ymin'), linetype = 'dashed') +
+        gg.geom_line(mapping = gg.aes(y = 'ymax')) +
+        gg.labs(
+            title = title,
+            subtitle = subtitle,
+            x = x_label,
+            y = y_label,
+            color = col.replace("_", " ").title()
+        ) +
+        gg.scale_y_continuous(
+            limits = (0, 1.01),
+            breaks = np.arange(0, 1.01, 0.25),
+            labels = [f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
+        ) +
+        gg.scale_x_continuous(
+            limits = (0, year_range + 0.01),
+            breaks = np.arange(year_range + 1),
+            labels = [f"{x:.0f}" for x in np.arange(year_range + 1)],
+        ) +
+        gg.theme_bw()
+    )
+    return fig

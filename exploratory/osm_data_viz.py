@@ -110,19 +110,19 @@ if __name__ == "__main__":
     fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all")
 
     # Create multi-panel plots for the top tags in each OSM category
+    TOP_N_TYPES = 10
     for subtype in OSM_KEYS:
         fig = change_multiplot_create(
             observations = to_plot_df,
             col = subtype,
-            top_n = 9,
+            top_n = TOP_N_TYPES,
             no_change_col = 'no_change',
             change_col = 'change',
             final_observation_col = 'final_obs',
+            title = f"Stability of the `{TAG_KEY}` tag over time by {subtype}",
+            subtitle = f"Top {TOP_N_TYPES} {subtype} tags by number of observations",
+            x_label = "Years since tag",
+            y_label = "Proportion remaining unchanged",
             day_range = max_days,
         )
-        fig_save(
-            fig = fig,
-            stub = f"osm_changes_{TAG_KEY}_{subtype}",
-            height = 12,
-            width = 12
-        )
+        fig_save(fig = fig, stub = f"osm_changes_{TAG_KEY}_{subtype}")
