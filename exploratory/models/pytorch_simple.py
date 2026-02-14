@@ -14,19 +14,27 @@ import torchmin
 import plotnine as gg
 from pathlib import Path
 
+from openpois.models.base_model import BaseModel, EventRate
+
 # Globals
 DATA_VERSION = "20260129"
 MODEL_VERSION = "20260212"
 DATA_DIR = Path("~/data/openpois").expanduser() / DATA_VERSION
 MODEL_DIR = Path("~/data/openpois").expanduser() / MODEL_VERSION
 TAG_KEY = "name"
+GROUP_KEY = "leisure"
+GROUP_VALUES = ["park"]
 
 # Load data
 observations_df = pd.read_csv(DATA_DIR / f"osm_observations_{TAG_KEY}.csv")
 
 # Ensure model directory exists
 MODEL_DIR.mkdir(parents = True, exist_ok = True)
-
+model_suffix = f"_simple_{TAG_KEY}"
+if GROUP_KEY is not None:
+    model_suffix += f"_{GROUP_KEY}"
+if GROUP_VALUES is not None:
+    model_suffix += f"_{'-'.join(GROUP_VALUES)}"
 # Device setup
 DTYPE = torch.float64
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,6 +43,17 @@ torch.set_default_device(DEVICE)
 
 
 ## Input data preparation --------------------------------------------------------------->
+
+# If a group key was set, subset to those observations
+if GROUP_KEY is not None:
+    keep_ids = observations_df.dropna(subset = [GROUP_KEY]).id.unique().tolist()
+    observations_df = observations_df.query('id in @keep_ids')
+# If a group values were set, subset to those observations
+if GROUP_VALUES is not None:
+    keep_ids = observations_df.loc[
+        observations_df[GROUP_KEY].isin(GROUP_VALUES), 'id'
+    ].unique().tolist()
+    observations_df = observations_df.query('id in @keep_ids')
 
 timestamp_cols = ['obs_timestamp', 'last_obs_timestamp', 'last_tag_timestamp']
 for timestamp_col in timestamp_cols:
@@ -52,51 +71,36 @@ obs_sub = (observations_df
 ## Define model ------------------------------------------------------------------------->
 
 # Only parameters need requires_grad=True; data tensors must not, or memory explodes
-X = torch.tensor(obs_sub[['tag_years']].values, dtype=DTYPE, device=DEVICE)
 y = torch.tensor(obs_sub['changed'].values, dtype=DTYPE, device=DEVICE)
-
-# Estimand: lambda, the rate parameter that is always positive
-omega = torch.tensor(
+X = torch.zeros(obs_sub.shape[0], 1, dtype=DTYPE, device=DEVICE)
+t1 = torch.zeros(obs_sub.shape[0], 1, dtype=DTYPE, device=DEVICE)
+t2 = torch.tensor(obs_sub[['tag_years']].values, dtype=DTYPE, device=DEVICE)
+# Estimand: (log) lambda, log of the rate parameter
+starting_params = torch.tensor(
     np.array([0.0]),
-    dtype=DTYPE,
-    device=DEVICE,
-    requires_grad=True,
+    dtype = DTYPE,
+    device = DEVICE,
+    requires_grad = True,
 )
 
-# Small epsilon to avoid log(0) and log(1-p) = -inf -> NaN
-def nll_torchmin(params, y, X, DELTA = 1e-6, EPSILON = 1e-7):
-    log_lambda = params[0].clamp(-20.0, 20.0)  # keep lambda in [2e-9, 5e8]
-    lambda_ = torch.exp(log_lambda)
-    # X is (n,1); ensure positive so p is in (0,1)
-    x = X.clamp(min = DELTA)
-    p = (
-        (1.0 - torch.exp(-lambda_ * x))
-        .squeeze(-1)
-        .clamp(min = EPSILON, max = 1.0 - EPSILON)
-    )
-    ll = torch.sum(y * torch.log(p) + (1.0 - y) * torch.log(1.0 - p))
-    return -ll
+def simple_model_fun(params, covariates = None):
+    return torch.exp(params)
 
-model_fit = torchmin.minimize(
-    fun = lambda params: nll_torchmin(params = params, y = y, X = X),
-    x0 = omega,
-    method = 'l-bfgs',
-    tol = 1e-5,
-    disp = True,
+simple_model = BaseModel(
+    event_rate = EventRate(
+        type = 'constant',
+        fun = simple_model_fun,
+    ),
+    params = starting_params,
+    covariates = X,
+    target = y,
+    t1 = t1,
+    t2 = t2,
+    verbose = True
 )
+simple_model.fit()
 
-# Prepare model results
-hessian_ = torch.autograd.functional.hessian(
-    lambda params: nll_torchmin(params, y, X),
-    model_fit.x
-)
-se_torch_ = torch.sqrt(torch.linalg.diagonal(torch.linalg.inv(hessian_)))
-
-m1 = pd.DataFrame({
-    'parameter': ['log_lambda'],
-    'estimate': model_fit.x.data.cpu().numpy(),
-    'std_err': se_torch_.data.cpu().numpy(),
-})
+m1 = simple_model.get_results().assign(parameter = 'log_lambda')
 m2 = (
     m1
     .copy()
@@ -108,8 +112,14 @@ m2 = (
 )
 model_results = pd.concat([m1, m2])
 
+predictions = simple_model.predict(
+    t2 = torch.tensor(np.arange(11), dtype = DTYPE, device = DEVICE),
+    covariates = None,
+).assign(units = 'years')
+predictions.to_csv(MODEL_DIR / f"predictions{model_suffix}.csv", index = False)
+
 
 ## Run model and save results ----------------------------------------------------------->
 
-model_results.to_csv(MODEL_DIR / f"fitted_params_{TAG_KEY}.csv", index = False)
-torch.save(model_fit, MODEL_DIR / f"fitted_params_{TAG_KEY}.pt")
+model_results.to_csv(MODEL_DIR / f"fitted_params{model_suffix}.csv", index = False)
+torch.save(simple_model, MODEL_DIR / f"fitted_params{model_suffix}.pt")
