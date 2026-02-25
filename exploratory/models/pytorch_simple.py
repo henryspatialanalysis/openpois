@@ -56,12 +56,17 @@ if __name__ == "__main__":
     # Define model
     # Only parameters need requires_grad = True
     y = tensor(obs_sub['changed'].values)
-    t1 = torch.zeros(obs_sub.shape[0], 1, dtype=dtype, device=device)
     t2 = tensor(obs_sub[['tag_years']].values)
+    t1 = torch.zeros_like(t2)
     # Estimand: (log) lambda, log of the rate parameter
     def simple_model_fun(params: torch.Tensor) -> torch.Tensor:
         return torch.exp(params)
     starting_params = tensor(np.array([0.0]), requires_grad = True)
+
+    # def pseudo_varying_model_fun(params: torch.Tensor) -> callable:
+    #     def f_t(t: torch.Tensor) -> torch.Tensor:
+    #         return torch.exp(params).repeat(t.shape).reshape(list(t.shape) + [-1])
+    #     return f_t
 
     simple_model = ModelFitter(
         event_rate_type = 'constant',
@@ -78,7 +83,9 @@ if __name__ == "__main__":
     simple_model.fit()
     simple_model.generate_parameter_draws(n_draws = N_DRAWS)
     fitted_params = simple_model.get_parameter_table().assign(parameter = 'log_lambda')
-    predictions = simple_model.predict(t2 = tensor(np.arange(11))).assign(units = 'years')
+    predictions = simple_model.predict(
+        t2 = tensor(np.arange(11)).reshape(-1, 1)
+    ).assign(units = 'years')
 
     # Save results
     fitted_params.to_csv(MODEL_DIR / f"fitted_params{model_suffix}.csv", index = False)
