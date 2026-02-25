@@ -166,7 +166,7 @@ class ModelFitter:
         """
         Helper function to convert a tensor to a numpy array.
         """
-        return x.data.cpu().numpy()
+        return x.data.cpu().numpy().reshape(-1)
 
     def get_parameter_table(
         self,
