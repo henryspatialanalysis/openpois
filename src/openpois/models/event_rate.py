@@ -9,6 +9,7 @@ for a given model of a Poisson process.
 """
 
 import torch
+from math import ceil
 
 class EventRate:
     """
@@ -24,7 +25,8 @@ class EventRate:
         self,
         fun: callable,
         type: str = 'constant',
-        delta: float = 0.02
+        delta: float = 0.02,
+        max_steps: int = 200
     ):
         """
         Args:
@@ -42,6 +44,7 @@ class EventRate:
         self.type = type
         self.fun = fun
         self.delta = delta
+        self.max_steps = max_steps
 
     def calculate_change_constant(self, t1: torch.Tensor, t2: torch.Tensor, **kwargs):
         """
@@ -57,8 +60,23 @@ class EventRate:
         integral from t1 to t2 of `f(t)`
         """
         f = self.fun(**kwargs)
-        t_range = torch.linspace(t1, t2, steps = max(2, int((t2 - t1) / self.delta) + 1))
-        return torch.trapz(y = f(t_range), x = t_range)
+        # Generate samples between start and end points
+        steps = ceil((t2 - t1).max().item() / self.delta) + 1
+        steps = min(steps, self.max_steps)
+        sample_grid = torch.linspace(
+            start = 0,
+            end = 1,
+            steps = steps,
+            dtype = t2.dtype,
+            device = t2.device
+        ).view(-1, 1).T
+        t_samples = ((t2 - t1) @ sample_grid + t1)
+        y = f(t_samples)
+        if(y.ndim == 3):
+            tz = lambda y, t: torch.trapz(y = y, x = t)
+            return torch.func.vmap(tz, in_dims = (2, None))(y, t_samples).T
+        else:
+            return torch.trapz(y = y, x = t_samples)
 
     def calculate_change(self, t1: torch.Tensor, t2: torch.Tensor, **kwargs):
         """
