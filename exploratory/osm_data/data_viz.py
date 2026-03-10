@@ -9,6 +9,7 @@ This script:
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from config_versioned import Config
 
 import matplotlib
 matplotlib.use("Agg")
@@ -20,12 +21,13 @@ from openpois.osm.change_plots import change_plot_create, change_multiplot_creat
 # Configuration constants
 # ----------------------------------------------------------------------------------------
 
-DATA_VERSION = "20260129"
-SAVE_DIR = Path("~/data/openpois").expanduser() / DATA_VERSION
+_cfg = Config("~/repos/openpois/config.yaml")
+
+SAVE_DIR = _cfg.get_dir_path("osm_data")
 VIZ_DIR = SAVE_DIR / "viz"
-OSM_KEYS = ["amenity", "shop", "healthcare", "leisure"]
-TAG_KEY = "name"
-END_DATE = pd.Timestamp('2025-12-31', tz = 'UTC')
+OSM_KEYS = _cfg.get("osm_keys")
+TAG_KEY = _cfg.get("data_viz", "tag_key")
+END_DATE = pd.Timestamp(_cfg.get("end_date"), tz='UTC')
 
 max_days = 365 * 10
 VIZ_DIR.mkdir(parents = True, exist_ok = True)
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     # Read observations
     # Drop the first observation for each POI (when the POI was first added) - the last
     #   observation timestamp will be missing for these rows
-    timestamp_cols = ['obs_timestamp', 'last_obs_timestamp', 'last_tag_timestamp']
+    timestamp_cols = _cfg.get("data_viz", "timestamp_cols")
     observations_df = (pd.read_csv(SAVE_DIR / f"osm_observations_{TAG_KEY}.csv")
         .dropna(subset = timestamp_cols)
     )
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all")
 
     # Create multi-panel plots for the top tags in each OSM category
-    TOP_N_TYPES = 10
+    TOP_N_TYPES = _cfg.get("data_viz", "top_n_types")
     for subtype in OSM_KEYS:
         fig = change_multiplot_create(
             observations = to_plot_df,

@@ -9,7 +9,7 @@ This script:
 """
 
 import pandas as pd
-from pathlib import Path
+from config_versioned import Config
 
 from openpois.osm.format_observations import format_observations
 
@@ -18,10 +18,11 @@ from openpois.osm.format_observations import format_observations
 # Configuration constants
 # ----------------------------------------------------------------------------------------
 
-DATA_VERSION = "20260129"
-SAVE_DIR = Path("~/data/openpois").expanduser() / DATA_VERSION
-OSM_KEYS = ["amenity", "shop", "healthcare", "leisure"]
-TAG_KEY = "shop"
+_cfg = Config("~/repos/openpois/config.yaml")
+
+SAVE_DIR = _cfg.get_dir_path("osm_data")
+OSM_KEYS = _cfg.get("osm_keys")
+TAG_KEY = _cfg.get("format_tabular", "tag_key")
 
 
 # ----------------------------------------------------------------------------------------

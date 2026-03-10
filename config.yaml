@@ -1,0 +1,65 @@
+# Shared settings
+osm_keys:
+  - amenity
+  - shop
+  - healthcare
+  - leisure
+end_date: 2025-12-31
+
+# Settings for exploratory/osm_data/download.py
+download:
+  timeout: 1000
+  bbox:
+    ymin: 47.41
+    xmin: -122.48
+    ymax: 47.79
+    xmax: -122.16
+  start_date: 2016-01-01
+  date_interval_days: 7
+
+# Settings for exploratory/osm_data/format_tabular.py
+format_tabular:
+  tag_key: shop
+
+# Settings for exploratory/osm_data/data_viz.py
+data_viz:
+  tag_key: name
+  top_n_types: 10
+  timestamp_cols:
+    - obs_timestamp
+    - last_obs_timestamp
+    - last_tag_timestamp
+
+# Settings for exploratory/models/pytorch_simple.py
+pytorch_simple:
+  tag_key: name
+  group_key: null
+  group_values:
+    - park
+  n_draws: 250
+  save_full_model: false
+
+# Directory definitions (used with cfg.get_dir_path())
+directories:
+  osm_download:
+    versioned: false
+    path: ~/data/osm_example_data
+    files:
+      osm_elements: osm_elements.csv
+      osm_versions: osm_versions.csv
+      osm_changes: osm_changes.csv
+      osm_failed_elements: osm_failed_elements.csv
+  osm_data:
+    versioned: true
+    path: ~/data/openpois
+    files:
+      osm_changes: osm_changes.csv
+      osm_versions: osm_versions.csv
+  model_output:
+    versioned: true
+    path: ~/data/openpois
+    files: {}
+
+versions:
+  osm_data: "20260129"
+  model_output: "20260212"

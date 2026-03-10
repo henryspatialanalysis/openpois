@@ -7,7 +7,7 @@ This script uses the openpois.osm_download module to:
 3. Save the results to CSV files.
 """
 import datetime
-import os
+from config_versioned import Config
 from openpois.osm.download import (
     build_date_range,
     collect_element_ids,
@@ -18,15 +18,17 @@ from openpois.osm.download import (
 # Configuration constants
 # -----------------------------------------------------------------------------
 
-TIMEOUT = 1000
-BBOX = {"ymin": 47.41, "xmin": -122.48, "ymax": 47.79, "xmax": -122.16}
-START_DATE = datetime.datetime(2016, 1, 1)  # Earliest option is September 13, 2012
-END_DATE = datetime.datetime(2025, 12, 31)  # Latest
-DATE_INTERVAL = datetime.timedelta(days = 7)
-OSM_KEYS = ["amenity", "shop", "healthcare", "leisure"]
-SAVE_DIR = "~/data/osm_example_data"
+_cfg = Config("~/repos/openpois/config.yaml")
 
-os.makedirs(SAVE_DIR, exist_ok = True)
+TIMEOUT = _cfg.get("download", "timeout")
+BBOX = _cfg.get("download", "bbox")
+START_DATE = datetime.datetime.combine(_cfg.get("download", "start_date"), datetime.time.min)  # Earliest option is September 13, 2012
+END_DATE = datetime.datetime.combine(_cfg.get("end_date"), datetime.time.min)  # Latest
+DATE_INTERVAL = datetime.timedelta(days=_cfg.get("download", "date_interval_days"))
+OSM_KEYS = _cfg.get("osm_keys")
+SAVE_DIR = _cfg.get_dir_path("osm_download")
+
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # -----------------------------------------------------------------------------
@@ -50,12 +52,11 @@ if __name__ == "__main__":
     )
 
     # Save elements table
-    elements_table.to_csv(
-        os.path.join(SAVE_DIR, "osm_elements.csv"),
-        index = False,
+    _cfg.write(elements_table, "osm_download", "osm_elements")
+    print(
+        f"Succeeded on {len(succeed_dates)} dates, "
+        f"failed on {len(failed_dates)}"
     )
-    print(f"Saved {len(elements_table)} elements to osm_elements.csv")
-    print(f"Succeeded on {len(succeed_dates)} dates, failed on {len(failed_dates)}")
 
     # Download element histories
     versions_df, changes_df, failed_rows = download_element_histories(
@@ -65,19 +66,8 @@ if __name__ == "__main__":
     )
 
     # Save results
-    versions_df.to_csv(
-        os.path.join(SAVE_DIR, "osm_versions.csv"),
-        index=False,
-    )
-    changes_df.to_csv(
-        os.path.join(SAVE_DIR, "osm_changes.csv"),
-        index = False,
-    )
+    _cfg.write(versions_df, "osm_download", "osm_versions")
+    _cfg.write(changes_df, "osm_download", "osm_changes")
     print(f"Saved {len(versions_df)} versions and {len(changes_df)} changes")
-
+    _cfg.write(failed_rows, "osm_download", "osm_failed_elements")
     print(f"Failed on {len(failed_rows)} elements")
-    failed_elements = elements_table.iloc[failed_rows, :]
-    failed_elements.to_csv(
-        os.path.join(SAVE_DIR, "osm_failed_elements.csv"),
-        index = False,
-    )

@@ -11,20 +11,21 @@ import numpy as np
 import pandas as pd
 import torch
 from pathlib import Path
+from config_versioned import Config
 
 from openpois.models.model_fitter import ModelFitter
 from openpois.models.setup import pytorch_setup, prepare_data_for_model
 
 # Globals
-DATA_VERSION = "20260129"
-MODEL_VERSION = "20260212"
-DATA_DIR = Path("~/data/openpois").expanduser() / DATA_VERSION
-MODEL_DIR = Path("~/data/openpois").expanduser() / MODEL_VERSION
-TAG_KEY = "name"
-GROUP_KEY = None
-GROUP_VALUES = ["park"]
-N_DRAWS = 250
-SAVE_FULL_MODEL = False
+_cfg = Config("~/repos/openpois/config.yaml")
+
+DATA_DIR = _cfg.get_dir_path("osm_data")
+MODEL_DIR = _cfg.get_dir_path("model_output")
+TAG_KEY = _cfg.get("pytorch_simple", "tag_key")
+GROUP_KEY = _cfg.get("pytorch_simple", "group_key")
+GROUP_VALUES = _cfg.get("pytorch_simple", "group_values")
+N_DRAWS = _cfg.get("pytorch_simple", "n_draws")
+SAVE_FULL_MODEL = _cfg.get("pytorch_simple", "save_full_model")
 
 
 if __name__ == "__main__":
