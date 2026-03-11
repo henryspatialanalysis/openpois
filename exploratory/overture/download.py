@@ -21,7 +21,8 @@ from openpois.overture.download import download_overture_snapshot
 
 _cfg = Config("~/repos/openpois/config.yaml")
 
-RELEASE_DATE = _cfg.get("overture", "release_date", fail_if_none=False)  # None = auto-detect latest
+# None = auto-detect latest
+RELEASE_DATE = _cfg.get("overture", "release_date", fail_if_none=False)
 S3_BUCKET = _cfg.get("overture", "s3_bucket")
 S3_REGION = _cfg.get("overture", "s3_region")
 BBOX = _cfg.get("overture", "bbox")

@@ -11,6 +11,7 @@ queried and statistically analyzed.
 import numpy as np
 import pandas as pd
 
+
 def format_one_observation(
     changes_df: pd.DataFrame,
     versions_df: pd.DataFrame,
@@ -35,8 +36,8 @@ def format_one_observation(
           to multiple POIs.
         - obs_timestamp: timestamp for this observation (this version of the POI).
         - last_obs_timestamp: timestamp for the previous observation of this POI.
-        - last_tag_timestamp: timestamp for the last time the tag was changed prior to this
-          observation.
+        - last_tag_timestamp: timestamp for the last time the tag was changed
+          prior to this observation.
         - last_tag_user: username of the user who last changed the relevant tag
         - user: username of the user who made this observation
         - tag_key: key of the relevant tag
@@ -128,8 +129,7 @@ def format_one_observation(
         formatted_obs_df['id'] = changes_df.iloc[0, :]["id"]
         formatted_obs_df['tag_key'] = tag_key
         return formatted_obs_df
-    else:
-        return pd.DataFrame()
+    return pd.DataFrame()
 
 
 def format_observations(
@@ -152,10 +152,10 @@ def format_observations(
     """
     observations_df = pd.concat([
         format_one_observation(
-            changes_df = changes_df.query("id == @this_id"),
-            versions_df = versions_df.query("id == @this_id"),
-            tag_key = tag_key,
-            keep_keys = keep_keys,
+            changes_df=changes_df.query("id == @this_id"),
+            versions_df=versions_df.query("id == @this_id"),
+            tag_key=tag_key,
+            keep_keys=keep_keys,
         )
         for this_id in changes_df["id"].unique().tolist()
     ])

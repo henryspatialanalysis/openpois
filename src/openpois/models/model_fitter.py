@@ -13,6 +13,7 @@ import pandas as pd
 
 from openpois.models.event_rate import EventRate
 
+
 class ModelFitter:
     """
     Fitter for POI change rate models.
@@ -48,8 +49,8 @@ class ModelFitter:
             t2: End time of the time period.
         """
         self.event_rate = EventRate(
-            type = event_rate_type,
-            fun = event_rate_fun
+            type=event_rate_type,
+            fun=event_rate_fun
         )
         self.param_likelihood = param_likelihood
         self.starting_params = params
@@ -73,27 +74,29 @@ class ModelFitter:
         t2: torch.Tensor = None,
         **kwargs
     ):
-        if t1 is None: t1 = self.t1
-        if t2 is None: t2 = self.t2
+        if t1 is None:
+            t1 = self.t1
+        if t2 is None:
+            t2 = self.t2
         return self.event_rate.calculate_change(
-            t1 = t1,
-            t2 = t2,
-            params = params,
+            t1=t1,
+            t2=t2,
+            params=params,
             **data,
             **kwargs,
         )
 
     def calculate_probs(self, params: torch.Tensor, **kwargs):
-        change_rates = self.calculate_change_rates(params = params, **kwargs)
+        change_rates = self.calculate_change_rates(params=params, **kwargs)
         probs = (
             (1.0 - torch.exp(-1.0 * change_rates))
             .squeeze(-1)
-            .clamp(min = self.EPSILON, max = 1.0 - self.EPSILON)
+            .clamp(min=self.EPSILON, max=1.0 - self.EPSILON)
         )
         return probs
 
     def calculate_nll(self, params: torch.Tensor, **kwargs):
-        probs = self.calculate_probs(params = params, **kwargs)
+        probs = self.calculate_probs(params=params, **kwargs)
         ll = torch.sum(
             self.target * torch.log(probs) +
             (1.0 - self.target) * torch.log(1.0 - probs)
@@ -104,14 +107,14 @@ class ModelFitter:
 
     def fit(self):
         self.model_fit = torchmin.minimize(
-            fun = self.calculate_nll,
-            x0 = self.starting_params,
-            method = self.OPTIMIZER,
-            tol = self.TOLERANCE,
-            disp = self.verbose,
+            fun=self.calculate_nll,
+            x0=self.starting_params,
+            method=self.OPTIMIZER,
+            tol=self.TOLERANCE,
+            disp=self.verbose,
         )
         self.fitted_params = self.model_fit.x
-        self.fitted_probs = self.calculate_probs(params = self.fitted_params)
+        self.fitted_probs = self.calculate_probs(params=self.fitted_params)
         self.model_fit = True
 
     def generate_parameter_draws(self, n_draws: int, seed: int | None = None):
@@ -146,8 +149,8 @@ class ModelFitter:
         z = torch.randn(
             n_draws,
             n_params,
-            device = self.hessian.device,
-            dtype = self.hessian.dtype
+            device=self.hessian.device,
+            dtype=self.hessian.dtype
         )
         # theta = mu + (L^{-T} @ z.T).T  so each draw is mu + inv(L.T) @ z_i
         solves = torch.linalg.solve(
@@ -183,9 +186,9 @@ class ModelFitter:
         ub = 1.0 - lb
         return pd.DataFrame(
             {
-                'mean': self._to_table(self.param_draws.mean(dim = 1)),
-                'lower': self._to_table(self.param_draws.quantile(q = lb, dim = 1)),
-                'upper': self._to_table(self.param_draws.quantile(q = ub, dim = 1)),
+                'mean': self._to_table(self.param_draws.mean(dim=1)),
+                'lower': self._to_table(self.param_draws.quantile(q=lb, dim=1)),
+                'upper': self._to_table(self.param_draws.quantile(q=ub, dim=1)),
             }
         )
 
@@ -206,9 +209,9 @@ class ModelFitter:
         elif t1 is None:
             t1 = torch.zeros_like(t2)
         probs = self.calculate_probs(
-            params = self.param_draws,
-            t1 = t1,
-            t2 = t2,
+            params=self.param_draws,
+            t1=t1,
+            t2=t2,
             **data,
             **kwargs,
         )
@@ -218,8 +221,8 @@ class ModelFitter:
             {
                 't1': self._to_table(t1),
                 't2': self._to_table(t2),
-                'p_mean': self._to_table(probs.mean(dim = 1)),
-                'p_lower': self._to_table(probs.quantile(q = lb, dim = 1)),
-                'p_upper': self._to_table(probs.quantile(q = ub, dim = 1)),
+                'p_mean': self._to_table(probs.mean(dim=1)),
+                'p_lower': self._to_table(probs.quantile(q=lb, dim=1)),
+                'p_upper': self._to_table(probs.quantile(q=ub, dim=1)),
             }
         )

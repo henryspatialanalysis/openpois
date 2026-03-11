@@ -28,6 +28,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import geopandas as gpd
@@ -68,17 +69,28 @@ def download_pbf(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Downloading PBF from {url} to {output_path}...")
-    with requests.get(url, stream=True, timeout=600) as resp:
-        resp.raise_for_status()
-        total = int(resp.headers.get("content-length", 0))
-        downloaded = 0
-        with open(output_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
-                f.write(chunk)
-                downloaded += len(chunk)
-                if total:
-                    pct = 100 * downloaded / total
-                    print(f"  {pct:.1f}%", end="\r")
+    # Write to a temp file in the same directory, then rename atomically so
+    # that a partial download never masquerades as a complete file.
+    with tempfile.NamedTemporaryFile(
+        dir=output_path.parent, delete=False, suffix=".tmp"
+    ) as tmp:
+        tmp_path = Path(tmp.name)
+    try:
+        with requests.get(url, stream=True, timeout=(30, None)) as resp:
+            resp.raise_for_status()
+            total = int(resp.headers.get("content-length", 0))
+            downloaded = 0
+            with open(tmp_path, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total:
+                        pct = 100 * downloaded / total
+                        print(f"  {pct:.1f}%", end="\r")
+        tmp_path.rename(output_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     print(f"\nDownload complete: {output_path}")
     return output_path
 
@@ -124,7 +136,9 @@ def filter_pbf(
     output_pbf.parent.mkdir(parents=True, exist_ok=True)
     # Look for osmium on PATH first, then in the same bin dir as Python
     _env_bin = Path(sys.executable).parent / "osmium"
-    osmium_bin = shutil.which("osmium") or (str(_env_bin) if _env_bin.exists() else "osmium")
+    osmium_bin = (
+        shutil.which("osmium") or (str(_env_bin) if _env_bin.exists() else "osmium")
+    )
     key_args = [f"nw/{key}" for key in osm_keys]
     cmd = [osmium_bin, "tags-filter", "-o", str(output_pbf), str(input_pbf)] + key_args
     print(f"Running: {' '.join(cmd)}")

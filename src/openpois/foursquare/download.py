@@ -26,7 +26,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import geopandas as gpd
-import pandas as pd
 
 if TYPE_CHECKING:
     from pyiceberg.catalog.rest import RestCatalog
@@ -61,7 +60,7 @@ def get_fsq_catalog(
         ImportError: If pyiceberg is not installed.
     """
     try:
-        from pyiceberg.catalog.rest import RestCatalog
+        from pyiceberg.catalog.rest import RestCatalog  # pylint: disable=C0415
     except ImportError as e:
         raise ImportError(
             "pyiceberg is required for Foursquare downloads. "
@@ -134,7 +133,9 @@ def get_latest_fsq_release_date(
         )
     latest = max(timestamps)
     # Format as YYYY-MM-DD
-    return latest.strftime("%Y-%m-%d") if hasattr(latest, "strftime") else str(latest)[:10]
+    if hasattr(latest, "strftime"):
+        return latest.strftime("%Y-%m-%d")
+    return str(latest)[:10]
 
 
 # -----------------------------------------------------------------------------
@@ -161,8 +162,9 @@ def load_fsq_us_places(
 
     Args:
         catalog: An authenticated RestCatalog instance.
-        release_date: Snapshot date to load (e.g., '2026-02-12'), used as
-            the 'dt' partition filter.
+        release_date: Snapshot date label (e.g., '2026-02-12'). Written as
+            a metadata column; the table is unpartitioned so no row filter
+            is applied on this value.
         l1_category_names: L1 category names to retain (e.g.,
             ['Dining and Drinking', 'Retail']).
         catalog_namespace: Iceberg namespace containing the FSQ tables.
@@ -256,7 +258,6 @@ def download_foursquare_snapshot(
     token_env_var: str,
     release_date: str | None = None,
     token: str | None = None,
-    source_label: str = "foursquare",
 ) -> gpd.GeoDataFrame:
     """
     End-to-end orchestrator: connect to the Foursquare catalog, load US
@@ -278,8 +279,6 @@ def download_foursquare_snapshot(
             If None, uses the latest available snapshot.
         token: Foursquare portal API token. If None, reads from the
             environment variable named by token_env_var.
-        source_label: Value for the 'source' column (unused here, set in
-            load_fsq_us_places). Kept for interface consistency.
 
     Returns:
         GeoDataFrame written to output_path.

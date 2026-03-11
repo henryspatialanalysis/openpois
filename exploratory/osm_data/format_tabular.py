@@ -36,15 +36,13 @@ if __name__ == "__main__":
 
     # Format changes and versions into observations
     observations_df = format_observations(
-        changes_df = changes_df,
-        versions_df = versions_df,
-        tag_key = TAG_KEY,
-        keep_keys = OSM_KEYS,
+        changes_df=changes_df,
+        versions_df=versions_df,
+        tag_key=TAG_KEY,
+        keep_keys=OSM_KEYS,
     )
 
     # Save observations
-    observations_df.to_csv(
-        SAVE_DIR / f"osm_observations_{TAG_KEY}.csv",
-        index = False,
-    )
-    print(f"Saved {len(observations_df)} observations to {out_fp}")
+    out_path = SAVE_DIR / f"osm_observations_{TAG_KEY}.csv"
+    observations_df.to_csv(out_path, index=False)
+    print(f"Saved {len(observations_df)} observations to {out_path}")

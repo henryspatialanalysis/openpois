@@ -8,8 +8,10 @@ This module contains the EventRate class, which is used to store and calculate e
 for a given model of a Poisson process.
 """
 
-import torch
 from math import ceil
+
+import torch
+
 
 class EventRate:
     """
@@ -64,27 +66,25 @@ class EventRate:
         steps = ceil((t2 - t1).max().item() / self.delta) + 1
         steps = min(steps, self.max_steps)
         sample_grid = torch.linspace(
-            start = 0,
-            end = 1,
-            steps = steps,
-            dtype = t2.dtype,
-            device = t2.device
+            start=0,
+            end=1,
+            steps=steps,
+            dtype=t2.dtype,
+            device=t2.device
         ).view(-1, 1).T
-        t_samples = ((t2 - t1) @ sample_grid + t1)
+        t_samples = (t2 - t1) @ sample_grid + t1
         y = f(t_samples)
-        if(y.ndim == 3):
-            tz = lambda y, t: torch.trapz(y = y, x = t)
-            return torch.func.vmap(tz, in_dims = (2, None))(y, t_samples).T
-        else:
-            return torch.trapz(y = y, x = t_samples)
+        if y.ndim == 3:
+            tz = lambda y, t: torch.trapz(y=y, x=t)  # noqa: E731  # pylint: disable=C3001
+            return torch.func.vmap(tz, in_dims=(2, None))(y, t_samples).T
+        return torch.trapz(y=y, x=t_samples)
 
     def calculate_change(self, t1: torch.Tensor, t2: torch.Tensor, **kwargs):
         """
         Calculate the change probability between two time periods for this event rate.
         """
         if self.type == 'constant':
-            return self.calculate_change_constant(t1 = t1, t2 = t2, **kwargs)
-        elif self.type == 'varying':
-            return self.calculate_change_varying(t1 = t1, t2 = t2, **kwargs)
-        else:
-            raise ValueError(f"Invalid event rate type: {self.type}")
+            return self.calculate_change_constant(t1=t1, t2=t2, **kwargs)
+        if self.type == 'varying':
+            return self.calculate_change_varying(t1=t1, t2=t2, **kwargs)
+        raise ValueError(f"Invalid event rate type: {self.type}")

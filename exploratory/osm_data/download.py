@@ -22,7 +22,10 @@ _cfg = Config("~/repos/openpois/config.yaml")
 
 TIMEOUT = _cfg.get("download", "timeout")
 BBOX = _cfg.get("download", "bbox")
-START_DATE = datetime.datetime.combine(_cfg.get("download", "start_date"), datetime.time.min)  # Earliest option is September 13, 2012
+# Earliest option is September 13, 2012
+START_DATE = datetime.datetime.combine(
+    _cfg.get("download", "start_date"), datetime.time.min
+)
 END_DATE = datetime.datetime.combine(_cfg.get("end_date"), datetime.time.min)  # Latest
 DATE_INTERVAL = datetime.timedelta(days=_cfg.get("download", "date_interval_days"))
 OSM_KEYS = _cfg.get("osm_keys")
@@ -38,17 +41,17 @@ SAVE_DIR.mkdir(parents=True, exist_ok=True)
 if __name__ == "__main__":
     # Create date range
     date_range = build_date_range(
-        start_date = START_DATE,
-        end_date = END_DATE,
-        interval = DATE_INTERVAL,
+        start_date=START_DATE,
+        end_date=END_DATE,
+        interval=DATE_INTERVAL,
     )
 
     # Collect element IDs from Overpass
     elements_table, succeed_dates, failed_dates = collect_element_ids(
-        date_range = date_range,
-        bbox = BBOX,
-        osm_keys = OSM_KEYS,
-        timeout = TIMEOUT,
+        date_range=date_range,
+        bbox=BBOX,
+        osm_keys=OSM_KEYS,
+        timeout=TIMEOUT,
     )
 
     # Save elements table
@@ -60,9 +63,9 @@ if __name__ == "__main__":
 
     # Download element histories
     versions_df, changes_df, failed_rows = download_element_histories(
-        elements_table = elements_table,
-        timeout = TIMEOUT,
-        progress = True,
+        elements_table=elements_table,
+        timeout=TIMEOUT,
+        progress=True,
     )
 
     # Save results

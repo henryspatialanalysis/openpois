@@ -10,7 +10,6 @@ This module creates plots showing the stability of various OSM tags over time.
 import numpy as np
 import pandas as pd
 import plotnine as gg
-from functools import reduce
 
 
 def change_plot_reshape_data(
@@ -71,11 +70,11 @@ def change_plot_reshape_data(
             ]
         })
         .assign(
-            all = pd.col('no_change') + pd.col('change') + pd.col('unknown'),
-            ymin = pd.col('no_change') / pd.col('all'),
-            ymax = (pd.col('no_change') + pd.col('unknown')) / pd.col('all'),
-            day = np.arange(day_range),
-            year = pd.col('day') / 365,
+            all=pd.col('no_change') + pd.col('change') + pd.col('unknown'),
+            ymin=pd.col('no_change') / pd.col('all'),
+            ymax=(pd.col('no_change') + pd.col('unknown')) / pd.col('all'),
+            day=np.arange(day_range),
+            year=pd.col('day') / 365,
         )
     )
     return reshaped
@@ -115,35 +114,35 @@ def change_plot_create(
     """
     year_range = day_range / 365
     reshaped = change_plot_reshape_data(
-        observations = observations,
-        no_change_col = no_change_col,
-        change_col = change_col,
-        final_observation_col = final_observation_col,
-        day_range = day_range
+        observations=observations,
+        no_change_col=no_change_col,
+        change_col=change_col,
+        final_observation_col=final_observation_col,
+        day_range=day_range
     )
     fig = (
         gg.ggplot(
-            data = reshaped,
-            mapping = gg.aes(x = 'year', ymin = 'ymin', ymax = 'ymax')
+            data=reshaped,
+            mapping=gg.aes(x='year', ymin='ymin', ymax='ymax')
         ) +
-        gg.geom_ribbon(fill = 'blue', alpha = 0.25) +
-        gg.geom_line(mapping = gg.aes(y = 'ymin'), color = 'black', linetype = 'dashed') +
-        gg.geom_line(mapping = gg.aes(y = 'ymax'), color = 'black') +
+        gg.geom_ribbon(fill='blue', alpha=0.25) +
+        gg.geom_line(mapping=gg.aes(y='ymin'), color='black', linetype='dashed') +
+        gg.geom_line(mapping=gg.aes(y='ymax'), color='black') +
         gg.labs(
-            title = title,
-            subtitle = subtitle,
-            x = x_label,
-            y = y_label,
+            title=title,
+            subtitle=subtitle,
+            x=x_label,
+            y=y_label,
         ) +
         gg.scale_y_continuous(
-            limits = (0, 1.01),
-            breaks = np.arange(0, 1.01, 0.25),
-            labels = [f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
+            limits=(0, 1.01),
+            breaks=np.arange(0, 1.01, 0.25),
+            labels=[f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
         ) +
         gg.scale_x_continuous(
-            limits = (0, year_range + 0.01),
-            breaks = np.arange(year_range + 1),
-            labels = [f"{x:.0f}" for x in np.arange(year_range + 1)],
+            limits=(0, year_range + 0.01),
+            breaks=np.arange(year_range + 1),
+            labels=[f"{x:.0f}" for x in np.arange(year_range + 1)],
         ) +
         gg.theme_bw()
     )
@@ -188,7 +187,7 @@ def change_multiplot_create(
     """
     # Drop rows where the tag is missing
     # Get the top occurrences of particular tags
-    obs_sub = observations.dropna(subset = [col])
+    obs_sub = observations.dropna(subset=[col])
     top_tags = obs_sub[col].value_counts().head(top_n)
     # Create a list of ggplot objects
     reshaped_list = []
@@ -196,14 +195,14 @@ def change_multiplot_create(
         obs_sub_tag = obs_sub.query(f"{col} == @tag")
         reshaped_sub = (
             change_plot_reshape_data(
-                observations = obs_sub_tag,
-                no_change_col = no_change_col,
-                change_col = change_col,
-                final_observation_col = final_observation_col,
-                day_range = day_range
+                observations=obs_sub_tag,
+                no_change_col=no_change_col,
+                change_col=change_col,
+                final_observation_col=final_observation_col,
+                day_range=day_range
             )
             .assign(
-                group = tag.replace("_", " ").title() + f" (N = {obs_sub_tag.shape[0]})"
+                group=tag.replace("_", " ").title() + f" (N = {obs_sub_tag.shape[0]})"
             )
         )
         reshaped_list.append(reshaped_sub)
@@ -212,27 +211,27 @@ def change_multiplot_create(
     year_range = day_range / 365
     fig = (
         gg.ggplot(
-            data = reshaped_full,
-            mapping = gg.aes(x = 'year', color = 'group')
+            data=reshaped_full,
+            mapping=gg.aes(x='year', color='group')
         ) +
-        gg.geom_line(mapping = gg.aes(y = 'ymin'), linetype = 'dashed') +
-        gg.geom_line(mapping = gg.aes(y = 'ymax')) +
+        gg.geom_line(mapping=gg.aes(y='ymin'), linetype='dashed') +
+        gg.geom_line(mapping=gg.aes(y='ymax')) +
         gg.labs(
-            title = title,
-            subtitle = subtitle,
-            x = x_label,
-            y = y_label,
-            color = col.replace("_", " ").title()
+            title=title,
+            subtitle=subtitle,
+            x=x_label,
+            y=y_label,
+            color=col.replace("_", " ").title()
         ) +
         gg.scale_y_continuous(
-            limits = (0, 1.01),
-            breaks = np.arange(0, 1.01, 0.25),
-            labels = [f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
+            limits=(0, 1.01),
+            breaks=np.arange(0, 1.01, 0.25),
+            labels=[f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
         ) +
         gg.scale_x_continuous(
-            limits = (0, year_range + 0.01),
-            breaks = np.arange(year_range + 1),
-            labels = [f"{x:.0f}" for x in np.arange(year_range + 1)],
+            limits=(0, year_range + 0.01),
+            breaks=np.arange(year_range + 1),
+            labels=[f"{x:.0f}" for x in np.arange(year_range + 1)],
         ) +
         gg.theme_bw()
     )

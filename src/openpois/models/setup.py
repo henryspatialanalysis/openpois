@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 import torch_continuum as tc
 
+
 def pytorch_setup(optimize_level: str = 'fast', verbose: bool = False) -> str:
     """
     Set up PyTorch and torch_continuum for OpenPOI models.
@@ -23,7 +24,7 @@ def pytorch_setup(optimize_level: str = 'fast', verbose: bool = False) -> str:
     if verbose:
         print("Running on", device)
     torch.set_default_device(device)
-    tc.optimize(optimize_level, verbose = verbose)
+    tc.optimize(optimize_level, verbose=verbose)
     return device
 
 
@@ -38,11 +39,11 @@ def prepare_data_for_model(
     Prepare data for a model.
     """
     if group_key is not None:
-        keep_ids = data.dropna(subset = [group_key]).id.unique().tolist()
+        keep_ids = data.dropna(subset=[group_key]).id.unique().tolist()
         data = data.query('id in @keep_ids')
     # If a group values were set, subset to those observations
     if (group_key is not None) and (group_values is not None):
-        keep_ids = data.loc[
+        keep_ids = data.loc[  # noqa: F841  # pylint: disable=W0612
             data[group_key].isin(group_values), 'id'
         ].unique().tolist()
         data = data.query('id in @keep_ids')
@@ -52,11 +53,12 @@ def prepare_data_for_model(
     for timestamp_col in [t1_col, t2_col]:
         data[timestamp_col] = pd.to_datetime(data[timestamp_col])
     data = data.assign(
-        tag_days = (pd.col(t2_col) - pd.col(t1_col)).dt.days,
-        tag_years = pd.col('tag_days') / 365
+        tag_days=(pd.col(t2_col) - pd.col(t1_col)).dt.days,
+        tag_years=pd.col('tag_days') / 365
     )
-    data = (data
-        .dropna(subset = ['tag_years', 'changed'])
+    data = (
+        data
+        .dropna(subset=['tag_years', 'changed'])
         .query('tag_years > 1e-6')
     )
     return data

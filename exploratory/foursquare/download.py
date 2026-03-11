@@ -23,7 +23,8 @@ from openpois.foursquare.download import download_foursquare_snapshot
 
 _cfg = Config("~/repos/openpois/config.yaml")
 
-RELEASE_DATE = _cfg.get("foursquare", "release_date", fail_if_none=False)  # None = auto-detect latest
+# None = auto-detect latest
+RELEASE_DATE = _cfg.get("foursquare", "release_date", fail_if_none=False)
 CATALOG_URI = _cfg.get("foursquare", "catalog_uri")
 CATALOG_WAREHOUSE = _cfg.get("foursquare", "catalog_warehouse")
 CATALOG_NAMESPACE = _cfg.get("foursquare", "catalog_namespace")

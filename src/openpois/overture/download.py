@@ -23,14 +23,10 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import duckdb
 import geopandas as gpd
 import requests
-
-if TYPE_CHECKING:
-    pass
 
 
 # -----------------------------------------------------------------------------

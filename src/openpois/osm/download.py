@@ -21,15 +21,9 @@ from __future__ import annotations
 import datetime
 import time
 import xml.etree.ElementTree as ET
-from collections import namedtuple
-from typing import TYPE_CHECKING
-
 import overpass
 import pandas as pd
 import requests
-
-if TYPE_CHECKING:
-    import geopandas as gpd
 
 
 # -----------------------------------------------------------------------------
@@ -145,10 +139,10 @@ def collect_element_ids(
                 )
                 result_xml = api.get(query=query_string, build=False)
                 result_etree = ET.fromstring(result_xml)
-                for e_type in consider_ids:
+                for e_type, id_set in consider_ids.items():
                     elements = result_etree.findall(f".//{e_type}")
                     for element in elements:
-                        consider_ids[e_type].add(element.get("id"))
+                        id_set.add(element.get("id"))
             print(
                 f"Successfully queried date {this_date} in "
                 f"{time.time() - start_time:.2f} seconds"
@@ -161,8 +155,8 @@ def collect_element_ids(
 
     elements_table = pd.concat(
         [
-            pd.DataFrame({"type": e_type, "id": list(consider_ids[e_type])})
-            for e_type in consider_ids
+            pd.DataFrame({"type": e_type, "id": list(ids)})
+            for e_type, ids in consider_ids.items()
         ]
     )
     return elements_table, succeed_dates, failed_dates
