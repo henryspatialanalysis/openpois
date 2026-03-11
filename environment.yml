@@ -224,6 +224,7 @@ dependencies:
       - osmium==4.3.0
       - overpass==0.7
       - pluggy==1.6.0
+      - pyarrow==23.0.1
       - pycodestyle==2.14.0
       - pycparser==3.0
       - pydantic==2.12.5

@@ -59,7 +59,61 @@ directories:
     versioned: true
     path: ~/data/openpois
     files: {}
+  osm_snapshot:
+    versioned: false
+    path: ~/data/osm_snapshot
+    files:
+      raw_pbf: us-latest.osm.pbf
+      filtered_pbf: us-pois.osm.pbf
+      snapshot: osm_snapshot.parquet
+  overture_snapshot:
+    versioned: false
+    path: ~/data/overture_snapshot
+    files:
+      snapshot: overture_snapshot.parquet
+  foursquare_snapshot:
+    versioned: false
+    path: ~/data/foursquare_snapshot
+    files:
+      snapshot: foursquare_snapshot.parquet
 
 versions:
   osm_data: "20260129"
   model_output: "20260212"
+
+# Settings for exploratory/osm_snapshot/download.py
+osm_snapshot:
+  pbf_url: "https://download.geofabrik.de/north-america/us-latest.osm.pbf"
+
+# Settings for exploratory/overture/download.py
+overture:
+  release_date: null  # null = auto-detect latest
+  s3_bucket: "overturemaps-us-west-2"
+  s3_region: "us-west-2"
+  bbox:
+    xmin: -125.0
+    ymin: 24.5
+    xmax: -66.9
+    ymax: 49.4
+  taxonomy_l0_categories:
+    - food_and_drink
+    - shopping
+    - arts_and_entertainment
+    - sports_and_recreation
+    - health_care
+
+# Settings for exploratory/foursquare/download.py
+foursquare:
+  release_date: null  # null = auto-detect latest
+  catalog_uri: "https://catalog.h3-hub.foursquare.com/iceberg"
+  catalog_warehouse: "places"
+  catalog_namespace: "datasets"
+  places_table: "places_os"
+  categories_table: "categories_os"
+  token_env_var: "FSQ_PORTAL_TOKEN"
+  l1_category_names:
+    - "Dining and Drinking"
+    - "Retail"
+    - "Arts and Entertainment"
+    - "Sports and Recreation"
+    - "Health and Medicine"
