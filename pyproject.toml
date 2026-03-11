@@ -43,4 +43,20 @@ extend-ignore = ["E203", "W503"]
 max-line-length = 90
 
 [tool.pylint."messages control"]
-disable = ["C0114", "C0115", "C0116"]
+disable = [
+    "C0114",   # missing-module-docstring
+    "C0115",   # missing-class-docstring
+    "C0116",   # missing-function-docstring
+    "E1102",   # not-callable: false positive for torch.linalg functions
+    "R0902",   # too-many-instance-attributes: legitimate for model state classes
+    "R0913",   # too-many-arguments: common in data science APIs
+    "R0914",   # too-many-locals: acceptable in complex data processing functions
+    "R0917",   # too-many-positional-arguments: common in data science APIs
+    "W0102",   # dangerous-default-value: acceptable for keyword-only dict/list args
+    "W0622",   # redefined-builtin: 'type' as parameter name is a common pattern
+    "W0612",   # unused-variable: false positive for pandas query @variable references
+    "W0718",   # broad-exception-caught: intentional in network download functions
+]
+
+[tool.pylint.basic]
+good-names = ["L_prec", "i", "j", "k", "x", "y", "z", "f", "e", "t"]

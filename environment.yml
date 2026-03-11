@@ -185,6 +185,8 @@ dependencies:
   - pip:
       - accessible-pygments==0.0.5
       - annotated-types==0.7.0
+      - astroid==4.0.4
+      - autopep8==2.3.2
       - beautifulsoup4==4.14.3
       - build==1.4.0
       - cachetools==6.2.6
@@ -192,6 +194,7 @@ dependencies:
       - config-versioned==0.2.0
       - coverage==7.13.4
       - cryptography==46.0.5
+      - dill==0.4.1
       - duckdb==1.5.0
       - et-xmlfile==2.0.0
       - filelock==3.20.0
@@ -203,6 +206,7 @@ dependencies:
       - geojson==3.2.0
       - id==1.6.1
       - iniconfig==2.3.0
+      - isort==8.0.1
       - jaraco-classes==3.4.0
       - jaraco-context==6.1.0
       - jaraco-functools==4.4.0
@@ -223,6 +227,7 @@ dependencies:
       - osmdiff==0.4.6
       - osmium==4.3.0
       - overpass==0.7
+      - platformdirs==4.9.4
       - pluggy==1.6.0
       - pyarrow==23.0.1
       - pycodestyle==2.14.0
@@ -231,6 +236,7 @@ dependencies:
       - pydantic-core==2.41.5
       - pyflakes==3.4.0
       - pyiceberg==0.11.1
+      - pylint==4.0.5
       - pyproject-hooks==1.2.0
       - pyro-ppl==1.9.1
       - pyroaring==1.0.3
@@ -250,6 +256,7 @@ dependencies:
       - strictyaml==1.7.3
       - sympy==1.14.0
       - tenacity==9.1.4
+      - tomlkit==0.14.0
       - torch==2.10.0+cpu
       - torch-continuum==0.2.0
       - torchata==0.1.0
