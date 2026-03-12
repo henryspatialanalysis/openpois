@@ -16,15 +16,15 @@ from openpois.models.model_fitter import ModelFitter
 from openpois.models.setup import pytorch_setup, prepare_data_for_model
 
 # Globals
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
-DATA_DIR = _cfg.get_dir_path("osm_data")
-MODEL_DIR = _cfg.get_dir_path("model_output")
-TAG_KEY = _cfg.get("pytorch_simple", "tag_key")
-GROUP_KEY = _cfg.get("pytorch_simple", "group_key")
-GROUP_VALUES = _cfg.get("pytorch_simple", "group_values")
-N_DRAWS = _cfg.get("pytorch_simple", "n_draws")
-SAVE_FULL_MODEL = _cfg.get("pytorch_simple", "save_full_model")
+DATA_DIR = config.get_dir_path("osm_data")
+MODEL_DIR = config.get_dir_path("model_output")
+TAG_KEY = config.get("pytorch_simple", "tag_key")
+GROUP_KEY = config.get("pytorch_simple", "group_key", fail_if_none = False)
+GROUP_VALUES = config.get("pytorch_simple", "group_values", fail_if_none =False)
+N_DRAWS = config.get("pytorch_simple", "n_draws")
+SAVE_FULL_MODEL = config.get("pytorch_simple", "save_full_model")
 
 
 if __name__ == "__main__":
@@ -47,11 +47,11 @@ if __name__ == "__main__":
     # Data preparation
     observations_df = pd.read_csv(DATA_DIR / f"osm_observations_{TAG_KEY}.csv")
     obs_sub = prepare_data_for_model(
-        data=observations_df,
-        group_key=GROUP_KEY,
-        group_values=GROUP_VALUES,
-        t1_col='last_tag_timestamp',
-        t2_col='obs_timestamp',
+        data = observations_df,
+        group_key = GROUP_KEY,
+        group_values = GROUP_VALUES,
+        t1_col = 'last_tag_timestamp',
+        t2_col = 'obs_timestamp',
     )
 
     # Define model
@@ -63,7 +63,9 @@ if __name__ == "__main__":
     # Estimand: (log) lambda, log of the rate parameter
     def simple_model_fun(params: torch.Tensor) -> torch.Tensor:
         return torch.exp(params)
-    starting_params = tensor(np.array([0.0]), requires_grad=True)
+    def simple_log_likelihood(params: torch.Tensor) -> torch.Tensor:
+        return tensor(0.0, requires_grad = True)
+    starting_params = tensor(np.array([0.0]))
 
     # def pseudo_varying_model_fun(params: torch.Tensor) -> callable:
     #     def f_t(t: torch.Tensor) -> torch.Tensor:
@@ -71,26 +73,40 @@ if __name__ == "__main__":
     #     return f_t
 
     simple_model = ModelFitter(
-        event_rate_type='constant',
-        event_rate_fun=simple_model_fun,
-        params=starting_params,
-        target=y,
-        data={},
-        t1=t1,
-        t2=t2,
-        verbose=True
+        event_rate_type = 'constant',
+        event_rate_fun = simple_model_fun,
+        param_likelihood = simple_log_likelihood,
+        params = starting_params,
+        target = y,
+        data = {},
+        t1 = t1,
+        t2 = t2,
+        verbose = True
     )
 
     # Run the model and get predictions
     simple_model.fit()
     simple_model.generate_parameter_draws(n_draws=N_DRAWS)
-    fitted_params = simple_model.get_parameter_table().assign(parameter='log_lambda')
+    fitted_params = (
+        simple_model
+        .get_parameter_table()
+        .assign(parameter = 'log_lambda')
+    )
     predictions = simple_model.predict(
-        t2=tensor(np.arange(11)).reshape(-1, 1)
-    ).assign(units='years')
+        t2 = tensor(np.arange(11)).reshape(-1, 1)
+    ).assign(units = 'years')
 
     # Save results
-    fitted_params.to_csv(MODEL_DIR / f"fitted_params{model_suffix}.csv", index=False)
-    predictions.to_csv(MODEL_DIR / f"predictions{model_suffix}.csv", index=False)
+    fitted_params.to_csv(
+        MODEL_DIR / f"fitted_params{model_suffix}.csv",
+        index = False
+    )
+    predictions.to_csv(
+        MODEL_DIR / f"predictions{model_suffix}.csv",
+        index = False
+    )
     if SAVE_FULL_MODEL:
-        torch.save(simple_model, MODEL_DIR / f"fitted_params{model_suffix}.pt")
+        torch.save(
+            simple_model,
+            MODEL_DIR / f"fitted_params{model_suffix}.pt"
+        )
