@@ -49,8 +49,8 @@ class ModelFitter:
             t2: End time of the time period.
         """
         self.event_rate = EventRate(
-            type=event_rate_type,
-            fun=event_rate_fun
+            type = event_rate_type,
+            fun = event_rate_fun
         )
         self.param_likelihood = param_likelihood
         self.starting_params = params
@@ -79,15 +79,15 @@ class ModelFitter:
         if t2 is None:
             t2 = self.t2
         return self.event_rate.calculate_change(
-            t1=t1,
-            t2=t2,
-            params=params,
+            t1 = t1,
+            t2 = t2,
+            params = params,
             **data,
             **kwargs,
         )
 
     def calculate_probs(self, params: torch.Tensor, **kwargs):
-        change_rates = self.calculate_change_rates(params=params, **kwargs)
+        change_rates = self.calculate_change_rates(params = params, **kwargs)
         probs = (
             (1.0 - torch.exp(-1.0 * change_rates))
             .squeeze(-1)
@@ -96,7 +96,7 @@ class ModelFitter:
         return probs
 
     def calculate_nll(self, params: torch.Tensor, **kwargs):
-        probs = self.calculate_probs(params=params, **kwargs)
+        probs = self.calculate_probs(params = params, **kwargs)
         ll = torch.sum(
             self.target * torch.log(probs) +
             (1.0 - self.target) * torch.log(1.0 - probs)
@@ -107,11 +107,11 @@ class ModelFitter:
 
     def fit(self):
         self.model_fit = torchmin.minimize(
-            fun=self.calculate_nll,
-            x0=self.starting_params,
-            method=self.OPTIMIZER,
-            tol=self.TOLERANCE,
-            disp=self.verbose,
+            fun = self.calculate_nll,
+            x0 = self.starting_params,
+            method = self.OPTIMIZER,
+            tol = self.TOLERANCE,
+            disp = self.verbose,
         )
         self.fitted_params = self.model_fit.x
         self.fitted_probs = self.calculate_probs(params=self.fitted_params)
@@ -138,8 +138,8 @@ class ModelFitter:
             raise ValueError("Run fit() first")
         if self.hessian is None:
             self.hessian = torch.autograd.functional.hessian(
-                self.calculate_nll,
-                self.fitted_params,
+                func = self.calculate_nll,
+                inputs = self.fitted_params,
             )
         if seed is not None:
             torch.manual_seed(seed)
@@ -149,13 +149,13 @@ class ModelFitter:
         z = torch.randn(
             n_draws,
             n_params,
-            device=self.hessian.device,
-            dtype=self.hessian.dtype
+            device = self.hessian.device,
+            dtype = self.hessian.dtype
         )
         # theta = mu + (L^{-T} @ z.T).T  so each draw is mu + inv(L.T) @ z_i
         solves = torch.linalg.solve(
-            L_prec.T.unsqueeze(1).expand(n_draws, -1, -1),
-            z.unsqueeze(-1),
+            A = L_prec.T.unsqueeze(1).expand(n_draws, -1, -1),
+            B = z.unsqueeze(-1),
         )
         draws = self.fitted_params.unsqueeze(1) + solves.squeeze(-1).transpose(0, 1)
         self.param_draws = draws
@@ -186,9 +186,9 @@ class ModelFitter:
         ub = 1.0 - lb
         return pd.DataFrame(
             {
-                'mean': self._to_table(self.param_draws.mean(dim=1)),
-                'lower': self._to_table(self.param_draws.quantile(q=lb, dim=1)),
-                'upper': self._to_table(self.param_draws.quantile(q=ub, dim=1)),
+                'mean': self._to_table(self.param_draws.mean(dim = 1)),
+                'lower': self._to_table(self.param_draws.quantile(q = lb, dim = 1)),
+                'upper': self._to_table(self.param_draws.quantile(q = ub, dim = 1)),
             }
         )
 
@@ -209,9 +209,9 @@ class ModelFitter:
         elif t1 is None:
             t1 = torch.zeros_like(t2)
         probs = self.calculate_probs(
-            params=self.param_draws,
-            t1=t1,
-            t2=t2,
+            params = self.param_draws,
+            t1 = t1,
+            t2 = t2,
             **data,
             **kwargs,
         )
