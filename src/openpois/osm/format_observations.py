@@ -89,6 +89,7 @@ def format_one_observation(
         # Add all of the latest keep keys
         for key in keep_keys:
             if key in changeset.index:
+                latest_obs[key + '_last_value'] = latest_obs[key]
                 latest_obs[key] = changeset.loc[key, "value"]
         # Determine what is happening to the tag
         tag_added = (
