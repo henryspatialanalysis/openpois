@@ -12,6 +12,7 @@ import pandas as pd
 import torch
 from config_versioned import Config
 
+from openpois.models.osm_models import get_model_class
 from openpois.models.model_fitter import ModelFitter
 from openpois.models.setup import pytorch_setup, prepare_data_for_model
 
@@ -28,6 +29,7 @@ SAVE_FULL_MODEL = config.get("pytorch_simple", "save_full_model")
 
 
 if __name__ == "__main__":
+    print(f"Running on device: {pytorch_setup()}")
     # Ensure model directory exists
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     model_suffix = f"_simple_{TAG_KEY}"
@@ -35,14 +37,6 @@ if __name__ == "__main__":
         model_suffix += f"_{GROUP_KEY}"
     if GROUP_VALUES is not None:
         model_suffix += f"_{'-'.join(GROUP_VALUES)}"
-
-    # Device setup
-    dtype = torch.float64
-    device = pytorch_setup()
-
-    def tensor(x: np.ndarray, **kwargs) -> torch.Tensor:
-        """Convenience function to create a tensor with default dtype and device."""
-        return torch.tensor(x, dtype=dtype, device=device, **kwargs)
 
     # Data preparation
     observations_df = pd.read_csv(DATA_DIR / f"osm_observations_{TAG_KEY}.csv")
@@ -53,49 +47,60 @@ if __name__ == "__main__":
         t1_col = 'last_tag_timestamp',
         t2_col = 'obs_timestamp',
     )
+    obs_sub['dummy'] = 0.0
 
-    # Define model
-    # Only parameters need requires_grad = True
-    y = tensor(obs_sub['changed'].values)
-    t2 = tensor(obs_sub[['tag_years']].values)
-    t1 = torch.zeros_like(t2)
+    model_type = config.get('pytorch_simple', 'model_type')
+    model = get_model_class(model_type)(
+        dataset = obs_sub,
+        metadata = {
+            't1_col': 'dummy',
+            't2_col': 'tag_years',
+            'group': GROUP_KEY,
+            'var_prior': config.get('pytorch_simple', 'var_prior')
+        }
+    )
 
-    # Estimand: (log) lambda, log of the rate parameter
-    def simple_model_fun(params: torch.Tensor) -> torch.Tensor:
-        return torch.exp(params)
-    def simple_log_likelihood(params: torch.Tensor) -> torch.Tensor:
-        return tensor(0.0, requires_grad = True)
-    starting_params = tensor(np.array([0.0]))
-
-    # def pseudo_varying_model_fun(params: torch.Tensor) -> callable:
-    #     def f_t(t: torch.Tensor) -> torch.Tensor:
-    #         return torch.exp(params).repeat(t.shape).reshape(list(t.shape) + [-1])
-    #     return f_t
-
-    simple_model = ModelFitter(
-        event_rate_type = 'constant',
-        event_rate_fun = simple_model_fun,
-        param_likelihood = simple_log_likelihood,
-        params = starting_params,
-        target = y,
-        data = {},
-        t1 = t1,
-        t2 = t2,
+    model_fitter = ModelFitter(
+        event_rate_type = model.event_rate_type,
+        event_rate_fun = model.model_fun,
+        param_likelihood = model.param_likelihood,
+        params = model.parameters,
+        target = model.target,
+        data = model.model_data,
+        t1 = model.t1,
+        t2 = model.t2,
         verbose = True
     )
 
-    # Run the model and get predictions
-    simple_model.fit()
-    simple_model.generate_parameter_draws(n_draws=N_DRAWS)
-    fitted_params = (
-        simple_model
-        .get_parameter_table()
-        .assign(parameter = 'log_lambda')
-    )
-    predictions = simple_model.predict(
-        t2 = tensor(np.arange(11)).reshape(-1, 1)
-    ).assign(units = 'years')
+    # Run the model and get parameter summaries
+    model_fitter.fit()
+    model_fitter.generate_parameter_draws(n_draws = N_DRAWS)
+    fitted_params = pd.concat([
+        model_fitter.get_parameter_table(),
+        model.param_ids,
+    ], axis = 1)
 
+    # Predictions are done by group for random effects models
+    predict_times = torch.tensor(np.arange(11), dtype = torch.float64).reshape(-1, 1)
+    if(model_type == 'random_by_type'):
+        n_periods = predict_times.shape[0]
+        n_groups = model.model_data['group'].max() + 1
+        predict_times = predict_times.repeat(n_groups, 1)
+        predict_data = {'group': torch.arange(n_groups).repeat_interleave(n_periods)}
+    else:
+        predict_data = {}
+    predictions = model_fitter.predict(
+        t2 = predict_times,
+        data = predict_data,
+    ).assign(units = 'years')
+    for name, vals in predict_data.items():
+        predictions[name] = vals.reshape(-1)
+    if model_type == 'random_by_type':
+        predictions = predictions.merge(
+            model.group_lookup.rename(columns = {'group_id': 'group'}),
+            on = 'group',
+            how = 'left'
+        ).sort_values(['group_name', 't2'], ascending = True)
     # Save results
     fitted_params.to_csv(
         MODEL_DIR / f"fitted_params{model_suffix}.csv",
@@ -107,6 +112,6 @@ if __name__ == "__main__":
     )
     if SAVE_FULL_MODEL:
         torch.save(
-            simple_model,
+            model_fitter,
             MODEL_DIR / f"fitted_params{model_suffix}.pt"
         )
