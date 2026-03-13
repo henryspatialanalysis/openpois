@@ -24,6 +24,7 @@ def pytorch_setup(optimize_level: str = 'fast', verbose: bool = False) -> str:
     if verbose:
         print("Running on", device)
     torch.set_default_device(device)
+    torch.set_default_dtype(torch.float64)
     tc.optimize(optimize_level, verbose=verbose)
     return device
 
@@ -43,10 +44,10 @@ def prepare_data_for_model(
         data = data.query('id in @keep_ids')
     # If a group values were set, subset to those observations
     if (group_key is not None) and (group_values is not None):
-        keep_ids = data.loc[  # noqa: F841  # pylint: disable=W0612
-            data[group_key].isin(group_values), 'id'
-        ].unique().tolist()
-        data = data.query('id in @keep_ids')
+        data = (data
+            .dropna(subset = group_key)
+            .query(f'{group_key} in @group_values')
+        )
     # Prepare timestamps
     if any(col not in data.columns for col in [t1_col, t2_col]):
         raise ValueError("Timestamp columns are missing from the data.")
