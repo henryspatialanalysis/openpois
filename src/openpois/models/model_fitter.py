@@ -160,7 +160,7 @@ class ModelFitter:
         )
         # theta = mu + (L^{-T} @ z.T).T  so each draw is mu + inv(L.T) @ z_i
         solves = torch.linalg.solve(
-            A = L_prec.T.unsqueeze(1).expand(n_draws, -1, -1),
+            A = L_prec.T.unsqueeze(0).expand(n_draws, -1, -1),
             B = z.unsqueeze(-1),
         )
         draws = self.fitted_params.unsqueeze(1) + solves.squeeze(-1).transpose(0, 1)
