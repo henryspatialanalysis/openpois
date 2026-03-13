@@ -1,28 +1,49 @@
-# Shared settings
-osm_keys:
-  - amenity
-  - shop
-  - healthcare
-  - leisure
-end_date: 2025-12-31
-
-# Settings for exploratory/osm_data/download.py
+# Settings for downloading data
 download:
-  timeout: 1000
-  bbox:
-    ymin: 47.41
-    xmin: -122.48
-    ymax: 47.79
-    xmax: -122.16
-  start_date: 2016-01-01
-  date_interval_days: 7
+  general:
+    timeout: 1000
+    bbox:
+      xmin: -125.0
+      ymin: 24.5
+      xmax: -66.9
+      ymax: 49.4
+  osm:
+    start_date: 2016-01-01
+    end_date: 2025-12-31
+    date_interval_days: 7
+    pbf_url: "https://download.geofabrik.de/north-america/us-latest.osm.pbf"
+  download_keys:
+    - amenity
+    - shop
+    - healthcare
+    - leisure
+  overture:
+    release_date: null  # null = auto-detect latest
+    s3_bucket: "overturemaps-us-west-2"
+    s3_region: "us-west-2"
+    taxonomy_l0_categories:
+      - food_and_drink
+      - shopping
+      - arts_and_entertainment
+      - sports_and_recreation
+      - health_care
+  foursquare:
+    release_date: null  # null = auto-detect latest
+    catalog_uri: "https://catalog.h3-hub.foursquare.com/iceberg"
+    catalog_warehouse: "places"
+    catalog_namespace: "datasets"
+    places_table: "places_os"
+    categories_table: "categories_os"
+    token_env_var: "FSQ_PORTAL_TOKEN"
+    l1_category_names:
+      - "Dining and Drinking"
+      - "Retail"
+      - "Arts and Entertainment"
+      - "Sports and Recreation"
+      - "Health and Medicine"
 
-# Settings for exploratory/osm_data/format_tabular.py
-format_tabular:
-  tag_key: shop
-
-# Settings for exploratory/osm_data/data_viz.py
-data_viz:
+# Settings for OSM exploratory data analysis
+osm_data:
   tag_key: name
   top_n_types: 10
   timestamp_cols:
@@ -31,99 +52,51 @@ data_viz:
     - last_tag_timestamp
 
 # Settings for exploratory/models/pytorch_simple.py
-pytorch_simple:
+osm_turnover_model:
   model_type: random_by_type
-  tag_key: shop
+  tag_key: name
   var_prior: [0.0, 1.0]
   group_key: last_tag_value
-  group_values:
-    - clothes
-    - convenience
-    - supermarket
-    - hairdresser
-    - beauty
-    - car_repair
-    - bakery
-    - mobile_phone
-    - furniture
-  n_draws: 100
+  group_values: null
+  n_draws: 250
   save_full_model: false
 
-# Directory definitions (used with cfg.get_dir_path())
+# Directory definitions (used with config.get_dir_path())
 directories:
-  osm_download:
-    versioned: false
-    path: ~/data/osm_example_data
-    files:
-      osm_elements: osm_elements.csv
-      osm_versions: osm_versions.csv
-      osm_changes: osm_changes.csv
-      osm_failed_elements: osm_failed_elements.csv
   osm_data:
     versioned: true
-    path: ~/data/openpois
+    path: ~/data/openpois/osm_data
     files:
       osm_changes: osm_changes.csv
       osm_versions: osm_versions.csv
+      osm_elements: osm_elements.csv
+      osm_failed_elements: osm_failed_elements.csv
   model_output:
     versioned: true
-    path: ~/data/openpois
+    path: ~/data/openpois/osm_turnover_model
     files: {}
-  osm_snapshot:
-    versioned: false
-    path: ~/data/osm_snapshot
+  snapshot_foursquare:
+    versioned: true
+    path: ~/data/openpois/snapshots/foursquare
+    files:
+      snapshot: foursquare_snapshot.parquet
+  snapshot_osm:
+    versioned: true
+    path: ~/data/openpois/snapshots/osm
     files:
       raw_pbf: us-latest.osm.pbf
       filtered_pbf: us-pois.osm.pbf
       snapshot: osm_snapshot.parquet
-  overture_snapshot:
-    versioned: false
-    path: ~/data/overture_snapshot
+  snapshot_overture:
+    versioned: true
+    path: ~/data/openpois/snapshots/overture
     files:
       snapshot: overture_snapshot.parquet
-  foursquare_snapshot:
-    versioned: false
-    path: ~/data/foursquare_snapshot
-    files:
-      snapshot: foursquare_snapshot.parquet
 
+# Versioned directories (used with config.get_dir_path())
 versions:
-  osm_data: "20260129"
-  model_output: "20260212"
-
-# Settings for exploratory/osm_snapshot/download.py
-osm_snapshot:
-  pbf_url: "https://download.geofabrik.de/north-america/us-latest.osm.pbf"
-
-# Settings for exploratory/overture/download.py
-overture:
-  release_date: null  # null = auto-detect latest
-  s3_bucket: "overturemaps-us-west-2"
-  s3_region: "us-west-2"
-  bbox:
-    xmin: -125.0
-    ymin: 24.5
-    xmax: -66.9
-    ymax: 49.4
-  taxonomy_l0_categories:
-    - food_and_drink
-    - shopping
-    - arts_and_entertainment
-    - sports_and_recreation
-    - health_care
-
-# Settings for exploratory/foursquare/download.py
-foursquare:
-  release_date: null  # null = auto-detect latest
-  catalog_uri: "https://catalog.h3-hub.foursquare.com/iceberg"
-  catalog_warehouse: "places"
-  catalog_namespace: "datasets"
-  places_table: "places_os"
-  categories_table: "categories_os"
-  token_env_var: "FSQ_PORTAL_TOKEN"
-  l1_category_names:
-    - "Dining and Drinking"
-    - "Retail"
-    - "Arts and Entertainment"
-    - "Sports and Recreation"
-    - "Health and Medicine"
+  osm_data: "20260313"
+  model_output: "20260313"
+  snapshot_osm: "20260313"
+  snapshot_overture: "20260313"
+  snapshot_foursquare: "20260313"

@@ -1,7 +1,7 @@
 """
 Exploratory script for downloading OSM data.
 
-This script uses the openpois.osm_download module to:
+This script uses the openpois.osm_data module to:
 1. Collect element IDs across a date range using the Overpass API.
 2. Download element histories from the OSM API.
 3. Save the results to CSV files.
@@ -18,18 +18,22 @@ from openpois.osm.download import (
 # Configuration constants
 # -----------------------------------------------------------------------------
 
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
-TIMEOUT = _cfg.get("download", "timeout")
-BBOX = _cfg.get("download", "bbox")
+TIMEOUT = config.get("download", "general", "timeout")
+BBOX = config.get("download", "general", "bbox")
 # Earliest option is September 13, 2012
 START_DATE = datetime.datetime.combine(
-    _cfg.get("download", "start_date"), datetime.time.min
+    config.get("download", "osm", "start_date"), datetime.time.min
 )
-END_DATE = datetime.datetime.combine(_cfg.get("end_date"), datetime.time.min)  # Latest
-DATE_INTERVAL = datetime.timedelta(days=_cfg.get("download", "date_interval_days"))
-OSM_KEYS = _cfg.get("osm_keys")
-SAVE_DIR = _cfg.get_dir_path("osm_download")
+END_DATE = datetime.datetime.combine(
+    config.get("download", "osm", "end_date"), datetime.time.min
+)  # Latest
+DATE_INTERVAL = datetime.timedelta(
+    days=config.get("download", "osm", "date_interval_days")
+)
+OSM_KEYS = config.get("download", "download_keys")
+SAVE_DIR = config.get_dir_path("osm_data")
 
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -55,7 +59,7 @@ if __name__ == "__main__":
     )
 
     # Save elements table
-    _cfg.write(elements_table, "osm_download", "osm_elements")
+    config.write(elements_table, "osm_data", "osm_elements")
     print(
         f"Succeeded on {len(succeed_dates)} dates, "
         f"failed on {len(failed_dates)}"
@@ -69,8 +73,8 @@ if __name__ == "__main__":
     )
 
     # Save results
-    _cfg.write(versions_df, "osm_download", "osm_versions")
-    _cfg.write(changes_df, "osm_download", "osm_changes")
+    config.write(versions_df, "osm_data", "osm_versions")
+    config.write(changes_df, "osm_data", "osm_changes")
     print(f"Saved {len(versions_df)} versions and {len(changes_df)} changes")
-    _cfg.write(failed_rows, "osm_download", "osm_failed_elements")
+    config.write(failed_rows, "osm_data", "osm_failed_elements")
     print(f"Failed on {len(failed_rows)} elements")

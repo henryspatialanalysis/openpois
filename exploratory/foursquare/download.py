@@ -21,24 +21,21 @@ from openpois.foursquare.download import download_foursquare_snapshot
 # Configuration constants
 # -----------------------------------------------------------------------------
 
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
 # None = auto-detect latest
-RELEASE_DATE = _cfg.get("foursquare", "release_date", fail_if_none=False)
-CATALOG_URI = _cfg.get("foursquare", "catalog_uri")
-CATALOG_WAREHOUSE = _cfg.get("foursquare", "catalog_warehouse")
-CATALOG_NAMESPACE = _cfg.get("foursquare", "catalog_namespace")
-PLACES_TABLE = _cfg.get("foursquare", "places_table")
-CATEGORIES_TABLE = _cfg.get("foursquare", "categories_table")
-TOKEN_ENV_VAR = _cfg.get("foursquare", "token_env_var")
-L1_CATEGORIES = _cfg.get("foursquare", "l1_category_names")
-SAVE_DIR = _cfg.get_dir_path("foursquare_snapshot")
+RELEASE_DATE = config.get("download", "foursquare", "release_date", fail_if_none=False)
+CATALOG_URI = config.get("download", "foursquare", "catalog_uri")
+CATALOG_WAREHOUSE = config.get("download", "foursquare", "catalog_warehouse")
+CATALOG_NAMESPACE = config.get("download", "foursquare", "catalog_namespace")
+PLACES_TABLE = config.get("download", "foursquare", "places_table")
+CATEGORIES_TABLE = config.get("download", "foursquare", "categories_table")
+TOKEN_ENV_VAR = config.get("download", "foursquare", "token_env_var")
+L1_CATEGORIES = config.get("download", "foursquare", "l1_category_names")
 
+SAVE_DIR = config.get_dir_path("snapshot_foursquare")
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
-
-OUTPUT_PATH = SAVE_DIR / _cfg.get(
-    "directories", "foursquare_snapshot", "files", "snapshot"
-)
+OUTPUT_PATH = config.get_file_path("snapshot_foursquare", "snapshot")
 
 
 # -----------------------------------------------------------------------------

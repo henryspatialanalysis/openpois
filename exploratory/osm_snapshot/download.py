@@ -15,19 +15,17 @@ from openpois.osm.snapshot import download_osm_snapshot
 # Configuration constants
 # -----------------------------------------------------------------------------
 
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
-PBF_URL = _cfg.get("osm_snapshot", "pbf_url")
-OSM_KEYS = _cfg.get("osm_keys")
-SAVE_DIR = _cfg.get_dir_path("osm_snapshot")
+PBF_URL = config.get("download", "osm", "pbf_url")
+OSM_KEYS = config.get("download", "download_keys")
+SAVE_DIR = config.get_dir_path("snapshot_osm")
 
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-RAW_PBF = SAVE_DIR / _cfg.get("directories", "osm_snapshot", "files", "raw_pbf")
-FILTERED_PBF = SAVE_DIR / _cfg.get(
-    "directories", "osm_snapshot", "files", "filtered_pbf"
-)
-OUTPUT_PATH = SAVE_DIR / _cfg.get("directories", "osm_snapshot", "files", "snapshot")
+RAW_PBF = config.get_file_path("snapshot_osm", "raw_pbf")
+FILTERED_PBF = config.get_file_path("snapshot_osm", "filtered_pbf")
+OUTPUT_PATH = config.get_file_path("snapshot_osm", "snapshot")
 
 
 # -----------------------------------------------------------------------------

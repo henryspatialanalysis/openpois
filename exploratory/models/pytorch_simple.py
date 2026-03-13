@@ -21,11 +21,11 @@ config = Config("~/repos/openpois/config.yaml")
 
 DATA_DIR = config.get_dir_path("osm_data")
 MODEL_DIR = config.get_dir_path("model_output")
-TAG_KEY = config.get("pytorch_simple", "tag_key")
-GROUP_KEY = config.get("pytorch_simple", "group_key", fail_if_none = False)
-GROUP_VALUES = config.get("pytorch_simple", "group_values", fail_if_none =False)
-N_DRAWS = config.get("pytorch_simple", "n_draws")
-SAVE_FULL_MODEL = config.get("pytorch_simple", "save_full_model")
+TAG_KEY = config.get("osm_turnover_model", "tag_key")
+GROUP_KEY = config.get("osm_turnover_model", "group_key", fail_if_none = False)
+GROUP_VALUES = config.get("osm_turnover_model", "group_values", fail_if_none =False)
+N_DRAWS = config.get("osm_turnover_model", "n_draws")
+SAVE_FULL_MODEL = config.get("osm_turnover_model", "save_full_model")
 
 
 if __name__ == "__main__":
@@ -49,14 +49,14 @@ if __name__ == "__main__":
     )
     obs_sub['dummy'] = 0.0
 
-    model_type = config.get('pytorch_simple', 'model_type')
+    model_type = config.get('osm_turnover_model', 'model_type')
     model = get_model_class(model_type)(
         dataset = obs_sub,
         metadata = {
             't1_col': 'dummy',
             't2_col': 'tag_years',
             'group': GROUP_KEY,
-            'var_prior': config.get('pytorch_simple', 'var_prior')
+            'var_prior': config.get('osm_turnover_model', 'var_prior')
         }
     )
 

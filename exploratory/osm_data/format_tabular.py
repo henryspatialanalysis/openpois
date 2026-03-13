@@ -21,8 +21,8 @@ from openpois.osm.format_observations import format_observations
 config = Config("~/repos/openpois/config.yaml")
 
 SAVE_DIR = config.get_dir_path("osm_data")
-OSM_KEYS = config.get("osm_keys")
-TAG_KEY = config.get("format_tabular", "tag_key")
+OSM_KEYS = config.get("download", "download_keys")
+TAG_KEY = config.get("osm_data", "tag_key")
 
 
 # ----------------------------------------------------------------------------------------

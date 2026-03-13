@@ -19,21 +19,19 @@ from openpois.overture.download import download_overture_snapshot
 # Configuration constants
 # -----------------------------------------------------------------------------
 
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
 # None = auto-detect latest
-RELEASE_DATE = _cfg.get("overture", "release_date", fail_if_none=False)
-S3_BUCKET = _cfg.get("overture", "s3_bucket")
-S3_REGION = _cfg.get("overture", "s3_region")
-BBOX = _cfg.get("overture", "bbox")
-TAXONOMY_CATEGORIES = _cfg.get("overture", "taxonomy_l0_categories")
-SAVE_DIR = _cfg.get_dir_path("overture_snapshot")
+RELEASE_DATE = config.get("download", "overture", "release_date", fail_if_none=False)
+S3_BUCKET = config.get("download", "overture", "s3_bucket")
+S3_REGION = config.get("download", "overture", "s3_region")
+BBOX = config.get("download", "general", "bbox")
+TAXONOMY_CATEGORIES = config.get("download", "overture", "taxonomy_l0_categories")
+SAVE_DIR = config.get_dir_path("snapshot_overture")
 
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-OUTPUT_PATH = SAVE_DIR / _cfg.get(
-    "directories", "overture_snapshot", "files", "snapshot"
-)
+OUTPUT_PATH = config.get_file_path("snapshot_overture", "snapshot")
 
 
 # -----------------------------------------------------------------------------

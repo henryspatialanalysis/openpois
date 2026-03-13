@@ -21,7 +21,7 @@ Downloads the Geofabrik US extract (~11 GB), filters to POI-relevant tags with o
 python exploratory/osm_snapshot/download.py
 ```
 
-Output: `~/data/osm_snapshot/osm_snapshot.parquet` (~7.8M POIs)
+Output: `~/data/openpois/snapshots/osm/<VERSION>/osm_snapshot.parquet` (~7.8M POIs)
 
 ### Overture Maps
 
@@ -31,7 +31,7 @@ Queries the public Overture Maps S3 bucket directly via DuckDB. No authenticatio
 python exploratory/overture/download.py
 ```
 
-Output: `~/data/overture_snapshot/overture_snapshot.parquet` (~7.2M POIs)
+Output: `~/data/openpois/snapshots/overture/<VERSION>/overture_snapshot.parquet` (~7.2M POIs)
 
 ### Foursquare OS Places
 
@@ -42,7 +42,7 @@ export FSQ_PORTAL_TOKEN="<your_token>"
 python exploratory/foursquare/download.py
 ```
 
-Output: `~/data/foursquare_snapshot/foursquare_snapshot.parquet` (~8.3M POIs)
+Output: `~/data/openpois/snapshots/foursquare/<VERSION>/foursquare_snapshot.parquet` (~8.3M POIs)
 
 ### Configuration
 
