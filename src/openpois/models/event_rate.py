@@ -53,7 +53,10 @@ class EventRate:
         Calculate the change probability for a constant event rate. Given lambda and a
         time period (t1, t2], the change probability is `lambda * (t2 - t1)`
         """
-        return (t2 - t1).reshape(-1, 1) * self.fun(**kwargs)
+        lam = self.fun(**kwargs)
+        if lam.dim() == 1:
+            lam = lam.unsqueeze(-1)
+        return (t2 - t1).reshape(-1, 1) * lam
 
     def calculate_change_varying(self, t1: torch.Tensor, t2: torch.Tensor, **kwargs):
         """
@@ -62,6 +65,8 @@ class EventRate:
         integral from t1 to t2 of `f(t)`
         """
         f = self.fun(**kwargs)
+        t1 = t1.reshape(-1)
+        t2 = t2.reshape(-1)
         # Generate samples between start and end points
         steps = ceil((t2 - t1).max().item() / self.delta) + 1
         steps = min(steps, self.max_steps)
@@ -71,8 +76,8 @@ class EventRate:
             steps=steps,
             dtype=t2.dtype,
             device=t2.device
-        ).view(-1, 1).T
-        t_samples = (t2 - t1) @ sample_grid + t1
+        ).view(1, -1)
+        t_samples = (t2 - t1).unsqueeze(1) * sample_grid + t1.unsqueeze(1)
         y = f(t_samples)
         if y.ndim == 3:
             tz = lambda y, t: torch.trapz(y=y, x=t)  # noqa: E731  # pylint: disable=C3001
