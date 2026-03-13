@@ -8,6 +8,8 @@ This module formats OSM changes and versions into observations, which can be mor
 queried and statistically analyzed.
 """
 
+import concurrent.futures
+
 import numpy as np
 import pandas as pd
 
@@ -49,6 +51,14 @@ def format_one_observation(
           `shop`, `healthcare`, and `leisure` by default. Each grouping tag will list that
           value, if present, at the time of this observation.
     """
+    # Pre-build lookup structures to avoid O(n²) repeated .query() calls
+    versions_by_v = {row['version']: row for row in versions_df.to_dict('records')}
+    changes_by_v = {
+        v: grp.set_index("key")
+        for v, grp in changes_df.groupby("version")
+    }
+    empty_changeset = pd.DataFrame(columns=["value", "change"]).rename_axis("key")
+
     # Setup
     obs_list = []
     names = [
@@ -65,10 +75,9 @@ def format_one_observation(
     # Only start recording observaitons when the relevant tag is first added
     add_to_list = False
     # Iterate through all versions of the POI
-    version_ids = sorted(versions_df["version"].unique().tolist())
-    for v_idx in version_ids:
-        version = versions_df.query("version == @v_idx").iloc[0].to_dict()
-        changeset = changes_df.query("version == @v_idx").set_index("key")
+    for v_idx in sorted(versions_by_v.keys()):
+        version = versions_by_v[v_idx]
+        changeset = changes_by_v.get(v_idx, empty_changeset)
         latest_obs['version'] = v_idx
         latest_obs['changeset'] = version['changeset']
         latest_obs['obs_timestamp'] = version['timestamp']
@@ -123,22 +132,31 @@ def format_one_observation(
             last_tag_timestamp = version['timestamp']
             last_tag_user = version['user']
         if add_to_list:
-            obs_list.append(pd.DataFrame({k: [v] for k, v in latest_obs.items()}))
+            obs_list.append(dict(latest_obs))
             last_obs_timestamp = latest_obs['obs_timestamp']
     # Combine observations from all changesets
     if len(obs_list) > 0:
-        formatted_obs_df = pd.concat(obs_list)
+        formatted_obs_df = pd.DataFrame(obs_list)
         formatted_obs_df['id'] = changes_df.iloc[0, :]["id"]
         formatted_obs_df['tag_key'] = tag_key
         return formatted_obs_df
     return pd.DataFrame()
 
 
+def _format_one_obs_worker(
+    args: tuple[pd.DataFrame, pd.DataFrame, str, list[str]]
+) -> pd.DataFrame:
+    """Worker function for parallel processing in format_observations."""
+    changes_group, versions_group, tag_key, keep_keys = args
+    return format_one_observation(changes_group, versions_group, tag_key, keep_keys)
+
+
 def format_observations(
     changes_df: pd.DataFrame,
     versions_df: pd.DataFrame,
     tag_key: str,
-    keep_keys: list[str] = ["amenity", "shop", "healthcare", "leisure"]
+    keep_keys: list[str] = ["amenity", "shop", "healthcare", "leisure"],
+    n_workers: int | None = None,
 ) -> pd.DataFrame:
     """
     Format changes and versions into observations.
@@ -148,17 +166,20 @@ def format_observations(
         versions_df: DataFrame with versions data.
         tag_key: Key of the tag to format.
         keep_keys: Keys to keep in the observations.
+        n_workers: Number of worker processes for parallel processing. Defaults to
+            the number of CPUs on the machine.
 
     Returns:
         DataFrame with observations.
     """
-    observations_df = pd.concat([
-        format_one_observation(
-            changes_df=changes_df.query("id == @this_id"),
-            versions_df=versions_df.query("id == @this_id"),
-            tag_key=tag_key,
-            keep_keys=keep_keys,
-        )
-        for this_id in changes_df["id"].unique().tolist()
-    ])
+    # Pre-split both DataFrames by ID to avoid repeated full-DataFrame scans
+    changes_by_id = {id_: grp for id_, grp in changes_df.groupby("id")}
+    versions_by_id = {id_: grp for id_, grp in versions_df.groupby("id")}
+    args_list = [
+        (changes_by_id[id_], versions_by_id[id_], tag_key, keep_keys)
+        for id_ in changes_by_id.keys()
+    ]
+    with concurrent.futures.ProcessPoolExecutor(max_workers=n_workers) as executor:
+        results = list(executor.map(_format_one_obs_worker, args_list))
+    observations_df = pd.concat([r for r in results if len(r) > 0])
     return observations_df
