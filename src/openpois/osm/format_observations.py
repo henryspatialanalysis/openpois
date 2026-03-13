@@ -53,7 +53,8 @@ def format_one_observation(
     obs_list = []
     names = [
         "version", "changeset", "obs_timestamp", "last_obs_timestamp",
-        "last_tag_timestamp", "user", "last_tag_user", "tag_value", "changed", "deleted"
+        "last_tag_timestamp", "user", "last_tag_user", "tag_value", "last_tag_value",
+        "changed", "deleted"
     ] + keep_keys
     # Create a working dictionary for the latest observation, with some starting values
     latest_obs = {name: None for name in names}
@@ -74,6 +75,7 @@ def format_one_observation(
         latest_obs['last_obs_timestamp'] = last_obs_timestamp
         latest_obs['last_tag_timestamp'] = last_tag_timestamp
         latest_obs['last_tag_user'] = last_tag_user
+        latest_obs['last_tag_value'] = last_tag_value
         latest_obs['user'] = version['user']
         # Add all of the latest keep keys
         for key in keep_keys:
