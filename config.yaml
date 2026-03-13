@@ -32,11 +32,21 @@ data_viz:
 
 # Settings for exploratory/models/pytorch_simple.py
 pytorch_simple:
-  tag_key: name
-  group_key: null
+  model_type: random_by_type
+  tag_key: shop
+  var_prior: [0.0, 1.0]
+  group_key: last_tag_value
   group_values:
-    - park
-  n_draws: 250
+    - clothes
+    - convenience
+    - supermarket
+    - hairdresser
+    - beauty
+    - car_repair
+    - bakery
+    - mobile_phone
+    - furniture
+  n_draws: 100
   save_full_model: false
 
 # Directory definitions (used with cfg.get_dir_path())
