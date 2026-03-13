@@ -10,6 +10,7 @@ This module contains a fitter for POI change models.
 import torch
 import torchmin
 import pandas as pd
+from functools import partial
 
 from openpois.models.event_rate import EventRate
 
@@ -106,16 +107,20 @@ class ModelFitter:
         return -1.0 * ll
 
     def fit(self):
+        nll_partial = partial(self.calculate_nll, data = self.data)
         self.model_fit = torchmin.minimize(
-            fun = self.calculate_nll,
+            fun = nll_partial,
             x0 = self.starting_params,
             method = self.OPTIMIZER,
             tol = self.TOLERANCE,
-            disp = self.verbose,
+            disp = 2 if self.verbose else 0
         )
         self.fitted_params = self.model_fit.x
-        self.fitted_probs = self.calculate_probs(params=self.fitted_params)
-        self.model_fit = True
+        self.fitted_probs = self.calculate_probs(
+            params = self.fitted_params,
+            data = self.data,
+        )
+        self.model_finished = True
 
     def generate_parameter_draws(self, n_draws: int, seed: int | None = None):
         """
@@ -134,11 +139,12 @@ class ModelFitter:
             Tensor of shape (n_params, n_draws) where each row corresponds to one
             parameter and each column corresponds to a posterior draw.
         """
-        if not self.model_fit:
+        if not self.model_finished:
             raise ValueError("Run fit() first")
         if self.hessian is None:
+            nll_partial = partial(self.calculate_nll, data = self.data)
             self.hessian = torch.autograd.functional.hessian(
-                func = self.calculate_nll,
+                func = nll_partial,
                 inputs = self.fitted_params,
             )
         if seed is not None:
@@ -212,7 +218,7 @@ class ModelFitter:
             params = self.param_draws,
             t1 = t1,
             t2 = t2,
-            **data,
+            data = data,
             **kwargs,
         )
         lb = (1.0 - ui_width) / 2
