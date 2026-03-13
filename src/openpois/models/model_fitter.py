@@ -23,7 +23,7 @@ class ModelFitter:
     # Small epsilon to avoid log(0) and log(1-p) = -inf -> NaN
     EPSILON = 1e-7
     # Model fit tolerance
-    TOLERANCE = 1e-5
+    TOLERANCE = 1e-7
     # Optimizer type
     OPTIMIZER = 'l-bfgs'
 
@@ -60,7 +60,7 @@ class ModelFitter:
         self.t1 = t1
         self.t2 = t2
         self.verbose = verbose
-        self.model_run = False
+        self.model_finished = False
         self.model_fit = None
         self.fitted_params = None
         self.fitted_probs = None
