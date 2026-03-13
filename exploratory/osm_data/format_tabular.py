@@ -18,11 +18,11 @@ from openpois.osm.format_observations import format_observations
 # Configuration constants
 # ----------------------------------------------------------------------------------------
 
-_cfg = Config("~/repos/openpois/config.yaml")
+config = Config("~/repos/openpois/config.yaml")
 
-SAVE_DIR = _cfg.get_dir_path("osm_data")
-OSM_KEYS = _cfg.get("osm_keys")
-TAG_KEY = _cfg.get("format_tabular", "tag_key")
+SAVE_DIR = config.get_dir_path("osm_data")
+OSM_KEYS = config.get("osm_keys")
+TAG_KEY = config.get("format_tabular", "tag_key")
 
 
 # ----------------------------------------------------------------------------------------
@@ -36,10 +36,10 @@ if __name__ == "__main__":
 
     # Format changes and versions into observations
     observations_df = format_observations(
-        changes_df=changes_df,
-        versions_df=versions_df,
-        tag_key=TAG_KEY,
-        keep_keys=OSM_KEYS,
+        changes_df = changes_df,
+        versions_df = versions_df,
+        tag_key = TAG_KEY,
+        keep_keys = OSM_KEYS,
     )
 
     # Save observations
