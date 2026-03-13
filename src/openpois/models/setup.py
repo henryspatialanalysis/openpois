@@ -33,6 +33,7 @@ def prepare_data_for_model(
     data: pd.DataFrame,
     group_key: str | None = None,
     group_values: list[str] | None = None,
+    min_value_count: int | None = None,
     t1_col: str = 'last_tag_timestamp',
     t2_col: str = 'obs_timestamp',
 ) -> pd.DataFrame:
@@ -48,6 +49,10 @@ def prepare_data_for_model(
             .dropna(subset = group_key)
             .query(f'{group_key} in @group_values')
         )
+    if (group_key is not None) and (min_value_count is not None):
+        value_counts = data.value_counts(group_key)
+        groups_over_threshold = value_counts[value_counts >= min_value_count].index.tolist()
+        data = data.query(f'{group_key} in @groups_over_threshold')
     # Prepare timestamps
     if any(col not in data.columns for col in [t1_col, t2_col]):
         raise ValueError("Timestamp columns are missing from the data.")
