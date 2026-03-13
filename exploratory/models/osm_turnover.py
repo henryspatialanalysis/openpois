@@ -33,11 +33,7 @@ if __name__ == "__main__":
     print(f"Running on device: {pytorch_setup()}")
     # Ensure model directory exists
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    model_suffix = f"_simple_{TAG_KEY}"
-    if GROUP_KEY is not None:
-        model_suffix += f"_{GROUP_KEY}"
-    if GROUP_VALUES is not None:
-        model_suffix += f"_{'-'.join(GROUP_VALUES)}"
+    config.write_self("model_output")
 
     # Data preparation
     observations_df = pd.read_csv(DATA_DIR / f"osm_observations_{TAG_KEY}.csv")
@@ -77,10 +73,18 @@ if __name__ == "__main__":
     # Run the model and get parameter summaries
     model_fitter.fit()
     model_fitter.generate_parameter_draws(n_draws = N_DRAWS)
-    fitted_params = pd.concat([
-        model_fitter.get_parameter_table(),
-        model.param_ids,
-    ], axis = 1)
+    fitted_params = (
+        pd.concat([
+            model_fitter.get_parameter_table(),
+            model.param_ids,
+        ], axis = 1)
+    )
+    if model.group_lookup is not None:
+        fitted_params = fitted_params.merge(
+            model.group_lookup,
+            on = 'group_id',
+            how = 'left'
+        )
 
     # Predictions are done by group for random effects models
     predict_times = torch.tensor(np.arange(11), dtype = torch.float64).reshape(-1, 1)
@@ -91,10 +95,14 @@ if __name__ == "__main__":
         predict_data = {'group': torch.arange(n_groups).repeat_interleave(n_periods)}
     else:
         predict_data = {}
-    predictions = model_fitter.predict(
-        t2 = predict_times,
-        data = predict_data,
-    ).assign(units = 'years')
+    predictions = (
+        model_fitter
+        .predict(
+            t2 = predict_times,
+            data = predict_data,
+        )
+        .assign(units = 'years')
+    )
     for name, vals in predict_data.items():
         predictions[name] = vals.reshape(-1)
     if model_type == 'random_by_type':
@@ -103,17 +111,17 @@ if __name__ == "__main__":
             on = 'group',
             how = 'left'
         ).sort_values(['group_name', 't2'], ascending = True)
+
     # Save results
-    fitted_params.to_csv(
-        MODEL_DIR / f"fitted_params{model_suffix}.csv",
-        index = False
-    )
-    predictions.to_csv(
-        MODEL_DIR / f"predictions{model_suffix}.csv",
-        index = False
-    )
+    config.write(fitted_params, "model_output", "fitted_params")
+    config.write(predictions, "model_output", "predictions")
     if SAVE_FULL_MODEL:
+        config.write(
+            pd.DataFrame(model_fitter.param_draws),
+            "model_output",
+            "param_draws"
+        )
         torch.save(
             model_fitter,
-            MODEL_DIR / f"fitted_params{model_suffix}.pt"
+            config.get_file_path("model_output", "fitted_model")
         )

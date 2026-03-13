@@ -1,3 +1,11 @@
+# Versioned directories (used with config.get_dir_path())
+versions:
+  osm_data: "20260313"
+  model_output: "20260313_by_healthcare"
+  snapshot_osm: "20260313"
+  snapshot_overture: "20260313"
+  snapshot_foursquare: "20260313"
+
 # Settings for downloading data
 download:
   general:
@@ -55,11 +63,12 @@ osm_data:
 osm_turnover_model:
   model_type: random_by_type
   tag_key: name
-  var_prior: [0.0, 1.0]
-  group_key: last_tag_value
+  var_prior: [-1.0, 5.0]
+  group_key: healthcare_last_value
   group_values: null
+  min_value_count: 5
   n_draws: 250
-  save_full_model: false
+  save_full_model: true
 
 # Directory definitions (used with config.get_dir_path())
 directories:
@@ -74,7 +83,11 @@ directories:
   model_output:
     versioned: true
     path: ~/data/openpois/osm_turnover_model
-    files: {}
+    files:
+      fitted_params: fitted_params.csv
+      param_draws: param_draws.csv
+      predictions: predictions.csv
+      fitted_model: fitted_model.pt
   snapshot_foursquare:
     versioned: true
     path: ~/data/openpois/snapshots/foursquare
@@ -92,11 +105,3 @@ directories:
     path: ~/data/openpois/snapshots/overture
     files:
       snapshot: overture_snapshot.parquet
-
-# Versioned directories (used with config.get_dir_path())
-versions:
-  osm_data: "20260313"
-  model_output: "20260313"
-  snapshot_osm: "20260313"
-  snapshot_overture: "20260313"
-  snapshot_foursquare: "20260313"
