@@ -24,6 +24,7 @@ MODEL_DIR = config.get_dir_path("model_output")
 TAG_KEY = config.get("osm_turnover_model", "tag_key")
 GROUP_KEY = config.get("osm_turnover_model", "group_key", fail_if_none = False)
 GROUP_VALUES = config.get("osm_turnover_model", "group_values", fail_if_none =False)
+MIN_VALUE_COUNT = config.get("osm_turnover_model", "min_value_count", fail_if_none = False)
 N_DRAWS = config.get("osm_turnover_model", "n_draws")
 SAVE_FULL_MODEL = config.get("osm_turnover_model", "save_full_model")
 
@@ -44,6 +45,7 @@ if __name__ == "__main__":
         data = observations_df,
         group_key = GROUP_KEY,
         group_values = GROUP_VALUES,
+        min_value_count = MIN_VALUE_COUNT,
         t1_col = 'last_tag_timestamp',
         t2_col = 'obs_timestamp',
     )

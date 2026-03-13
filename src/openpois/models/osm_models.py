@@ -45,6 +45,7 @@ class ModelFactory(ABC):
         self.metadata = metadata
         self.parameters = None
         self.param_ids = None
+        self.group_lookup = None
         self.model_fun = None
         self.param_likelihood = None
         self.event_rate_type = None
