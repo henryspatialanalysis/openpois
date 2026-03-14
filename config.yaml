@@ -23,15 +23,23 @@ download:
     overwrite_download: false
     overwrite_filter: false
     source_label: "osm"
-    keep_all_keys: true
+    keep_all_keys: false
     chunk_size: 100_000
     max_area_nodes: 1_000
     verbose: true
-    download_keys:
-      - amenity
-      - shop
-      - healthcare
-      - leisure
+    filter_keys: ['amenity', 'shop', 'healthcare', 'leisure']
+    extract_keys: [
+      'addr:city','addr:country','addr:housename','addr:housenumber','addr:postcode',
+      'addr:state','addr:street','addr:unit','amenity','atm','bar','bicycle',
+      'bicycle_parking','brand','brand:wikidata','building','check_date',
+      'check_date:opening_hours','cuisine','description','education','email',
+      'emergency','fountain','geometry','healthcare','healthcare:speciality','historic',
+      'image','landuse','leisure','name','nursery','official_name','old_name',
+      'opening_date','opening_hours','osm_id','osm_type','phone','playground','preschool',
+      'recycling_type','self_service','service','shelter','shop','short_name',
+      'social_facility','social_facility:for','source','sport','tourism','type','url',
+      'website','wikidata','wikipedia'
+    ]
   overture:
     release_date: null  # null = auto-detect latest
     s3_bucket: "overturemaps-us-west-2"

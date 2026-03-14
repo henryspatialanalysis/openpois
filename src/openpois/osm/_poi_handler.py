@@ -106,6 +106,7 @@ class POIRecordBuilder:
             "source": self._source_label,
             "osm_id": n.id,
             "osm_type": "node",
+            "last_edited": n.timestamp,
             "name": n.tags.get("name"),
             "geometry": Point(n.location.lon, n.location.lat),
         })
@@ -144,6 +145,7 @@ class POIRecordBuilder:
             "source": self._source_label,
             "osm_id": w.id,
             "osm_type": "way",
+            "last_edited": w.timestamp,
             "name": w.tags.get("name"),
             "geometry": geom,
         })
@@ -206,6 +208,7 @@ class POIRecordBuilder:
             "source": self._source_label,
             "osm_id": a.orig_id(),
             "osm_type": "relation",
+            "last_edited": a.timestamp,
             "name": a.tags.get("name"),
             "geometry": geom,
         })

@@ -34,6 +34,8 @@ from pathlib import Path
 import geopandas as gpd
 import osmium
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import requests
 
 from openpois.osm._poi_handler import POIRecordBuilder
@@ -175,14 +177,15 @@ def parse_pbf_to_geodataframe(
     source_label: str = "osm",
     chunk_size: int = 500_000,
     max_area_nodes: int | None = None,
+    chunk_dir: Path | None = None,
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
     Parses a filtered PBF file with pyosmium and returns a GeoDataFrame.
 
     Uses ``osmium.FileProcessor`` with a disk-backed location index and
-    writes records in chunks to temporary parquet files to avoid exhausting
-    memory on large extracts.
+    writes records in chunks to parquet files to avoid exhausting memory on
+    large extracts.
 
     Processes nodes as Point geometries, closed ways as Polygon geometries
     (open ways use their centroid), and multipolygon relations as
@@ -200,12 +203,18 @@ def parse_pbf_to_geodataframe(
             extracted.
         source_label: Value written to the 'source' column.
         chunk_size: Number of POI records to accumulate before flushing to a
-            temporary parquet file. Lower values reduce peak memory usage.
+            parquet file. Lower values reduce peak memory usage.
         max_area_nodes: If set, relation-derived areas with more than this
             many total coordinate nodes are skipped before any Shapely
             geometry is built. Useful for excluding large multipolygons
             (parks, admin boundaries) that can exhaust memory. None disables
             the check.
+        chunk_dir: Directory under which a ``parse_chunks/`` subdirectory is
+            created to hold intermediate chunk files and the location index.
+            The subdirectory is deleted after a successful merge. If the
+            function exits early (error or interrupt), the subdirectory is
+            left on disk for inspection. Defaults to the parent directory of
+            pbf_path.
         verbose: If True, log progress after each chunk is flushed.
 
     Returns:
@@ -225,15 +234,23 @@ def parse_pbf_to_geodataframe(
             f" (chunk_size={chunk_size:,})..."
         )
 
-    with tempfile.TemporaryDirectory(
-        prefix = "osm_chunks_"
-    ) as tmp_dir:
-        chunk_dir = Path(tmp_dir)
+    base_dir = Path(chunk_dir) if chunk_dir is not None else Path(pbf_path).parent
+    work_dir = base_dir / "parse_chunks"
+
+    existing_chunks = sorted(work_dir.glob("chunk_*.parquet")) if work_dir.exists() else []
+    if existing_chunks:
+        if verbose:
+            print(
+                f"Found {len(existing_chunks)} existing chunk(s) in {work_dir};"
+                " skipping parse, going straight to merge."
+            )
+    else:
+        work_dir.mkdir(parents=True, exist_ok=True)
         records: list[dict] = []
         chunk_idx = 0
         total_records = 0
 
-        loc_cache = str(chunk_dir / "locations.dat")
+        loc_cache = str(work_dir / "locations.dat")
         fp = osmium.FileProcessor(str(pbf_path)) \
             .with_locations(f"sparse_file_array,{loc_cache}") \
             .with_areas()
@@ -250,7 +267,7 @@ def parse_pbf_to_geodataframe(
             if rec is not None:
                 records.append(rec)
                 if len(records) >= chunk_size:
-                    _flush_chunk(records, chunk_dir, chunk_idx)
+                    _flush_chunk(records, work_dir, chunk_idx)
                     total_records += len(records)
                     if verbose:
                         print(
@@ -262,11 +279,11 @@ def parse_pbf_to_geodataframe(
 
         # Flush remaining records
         if records:
-            _flush_chunk(records, chunk_dir, chunk_idx)
+            _flush_chunk(records, work_dir, chunk_idx)
             total_records += len(records)
-            chunk_idx += 1
 
         if total_records == 0:
+            shutil.rmtree(work_dir)
             extra_cols = list(extract_keys) if extract_keys is not None else []
             return gpd.GeoDataFrame(
                 columns = [
@@ -276,13 +293,37 @@ def parse_pbf_to_geodataframe(
                 crs = "EPSG:4326",
             )
 
-        # Read and concatenate all chunk files
-        chunk_files = sorted(chunk_dir.glob("chunk_*.parquet"))
-        gdf = pd.concat(
-            [gpd.read_parquet(f) for f in chunk_files],
-            ignore_index = True,
-        )
-        gdf = gpd.GeoDataFrame(gdf, geometry = "geometry", crs = "EPSG:4326")
+        existing_chunks = sorted(work_dir.glob("chunk_*.parquet"))
+
+    # Merge chunk files via PyArrow (geometry stays as WKB bytes — no
+    # Shapely deserialization cost). Peak memory is one chunk at a time.
+    # Different chunks may have different tag columns (OSM tags are free-form),
+    # so we first collect all schemas via cheap metadata reads, unify them, then
+    # align each chunk to the unified schema (adding missing columns as nulls
+    # and casting type mismatches such as null→large_string).
+    chunk_schemas = [pq.read_schema(f) for f in existing_chunks]
+    unified_schema = pa.unify_schemas(chunk_schemas)
+    # Preserve GeoParquet metadata from the first chunk
+    unified_schema = unified_schema.with_metadata(chunk_schemas[0].metadata)
+    merged_path = work_dir / "merged.parquet"
+    with pq.ParquetWriter(merged_path, unified_schema) as writer:
+        for f in existing_chunks:
+            table = pq.read_table(f)
+            cols = {}
+            for field in unified_schema:
+                idx = table.schema.get_field_index(field.name)
+                if idx == -1:
+                    cols[field.name] = pa.nulls(len(table), type = field.type)
+                else:
+                    col = table.column(field.name)
+                    cols[field.name] = (
+                        col.cast(field.type) if col.type != field.type else col
+                    )
+            writer.write_table(pa.table(cols, schema = unified_schema))
+    gdf = gpd.read_parquet(merged_path)
+
+    # Clean up only after a successful merge and read
+    shutil.rmtree(work_dir)
 
     if verbose:
         print(
@@ -302,13 +343,15 @@ def download_osm_snapshot(
     raw_pbf_path: Path,
     filtered_pbf_path: Path,
     output_path: Path,
-    osm_keys: list[str],
+    filter_keys: list[str],
+    extract_keys: list[str],
     overwrite_download: bool = False,
     overwrite_filter: bool = False,
     source_label: str = "osm",
     keep_all_keys: bool = False,
     chunk_size: int = 500_000,
     max_area_nodes: int | None = None,
+    chunk_dir: Path | None = None,
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
@@ -328,21 +371,26 @@ def download_osm_snapshot(
         raw_pbf_path: Local path to store the downloaded raw PBF.
         filtered_pbf_path: Local path to store the filtered PBF.
         output_path: Path to write the output GeoParquet file.
-        osm_keys: OSM tag keys used to filter elements in the PBF. Elements
+        filter_keys: OSM tag keys used to filter elements in the PBF. Elements
             lacking all of these keys are excluded.
+        extract_keys: OSM tag keys to include as output columns. If None, all tags on
+            accepted elements are extracted.
         overwrite_download: Re-download even if raw_pbf_path exists.
         overwrite_filter: Re-filter even if filtered_pbf_path exists.
         source_label: Value for the output 'source' column.
         keep_all_keys: If True, all OSM tags are retained as columns in the
             output GeoDataFrame, not just those in osm_keys. osm_keys is still
             used to filter which elements are included.
-        chunk_size: Number of POI records per temporary parquet chunk during
-            parsing. Lower values reduce peak memory usage.
+        chunk_size: Number of POI records per parquet chunk during parsing.
+            Lower values reduce peak memory usage.
         max_area_nodes: If set, relation-derived areas with more than this
             many total coordinate nodes are skipped before any Shapely
             geometry is built. Useful for excluding large multipolygons
             (parks, admin boundaries) that can exhaust memory. None disables
             the check.
+        chunk_dir: Directory under which a ``parse_chunks/`` subdirectory is
+            created to hold intermediate chunk files. Defaults to the parent
+            of filtered_pbf_path. See parse_pbf_to_geodataframe for details.
         verbose: If True, log progress after each chunk is flushed.
 
     Returns:
@@ -358,21 +406,21 @@ def download_osm_snapshot(
     filter_pbf(
         input_pbf = raw_pbf_path,
         output_pbf = filtered_pbf_path,
-        osm_keys = osm_keys,
+        osm_keys = filter_keys,
         overwrite = overwrite_filter,
     )
-    extract_keys = None if keep_all_keys else osm_keys
     gdf = parse_pbf_to_geodataframe(
         pbf_path = filtered_pbf_path,
-        filter_keys = osm_keys,
-        extract_keys = extract_keys,
+        filter_keys = filter_keys,
+        extract_keys = None if keep_all_keys else extract_keys,
         source_label = source_label,
         chunk_size = chunk_size,
         max_area_nodes = max_area_nodes,
+        chunk_dir = chunk_dir,
         verbose = verbose,
     )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents = True, exist_ok = True)
     gdf.to_parquet(output_path)
     print(f"Saved OSM snapshot to {output_path}")
     return gdf
