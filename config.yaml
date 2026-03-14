@@ -105,3 +105,10 @@ directories:
     path: ~/data/openpois/snapshots/overture
     files:
       snapshot: overture_snapshot.parquet
+  testing:
+    versioned: false
+    path: ~/data/openpois/testing
+    files:
+      osm_snippet: osm_snippet.csv
+      overture_snippet: overture_snippet.csv
+      foursquare_snippet: foursquare_snippet.csv
