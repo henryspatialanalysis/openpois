@@ -147,7 +147,15 @@ def format_one_observation(
 def _format_one_obs_worker(
     args: tuple[pd.DataFrame, pd.DataFrame, str, list[str]]
 ) -> pd.DataFrame:
-    """Worker function for parallel processing in format_observations."""
+    """
+    Worker function for parallel processing in format_observations.
+
+    Args:
+        args: Tuple of (changes_group, versions_group, tag_key, keep_keys).
+
+    Returns:
+        DataFrame of formatted observations for a single POI.
+    """
     changes_group, versions_group, tag_key, keep_keys = args
     return format_one_observation(changes_group, versions_group, tag_key, keep_keys)
 

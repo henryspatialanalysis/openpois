@@ -40,16 +40,16 @@ OUTPUT_PATH = config.get_file_path("snapshot_osm", "snapshot")
 
 if __name__ == "__main__":
     gdf = download_osm_snapshot(
-        pbf_url=PBF_URL,
-        raw_pbf_path=RAW_PBF,
-        filtered_pbf_path=FILTERED_PBF,
-        output_path=OUTPUT_PATH,
-        osm_keys=OSM_KEYS,
-        overwrite_download=OVERWRITE_DOWNLOAD,
-        overwrite_filter=OVERWRITE_FILTER,
-        source_label=SOURCE_LABEL,
-        keep_all_keys=KEEP_ALL_KEYS,
-        chunk_size=CHUNK_SIZE,
-        verbose=VERBOSE,
+        pbf_url = PBF_URL,
+        raw_pbf_path = RAW_PBF,
+        filtered_pbf_path = FILTERED_PBF,
+        output_path = OUTPUT_PATH,
+        osm_keys = OSM_KEYS,
+        overwrite_download = OVERWRITE_DOWNLOAD,
+        overwrite_filter = OVERWRITE_FILTER,
+        source_label = SOURCE_LABEL,
+        keep_all_keys = KEEP_ALL_KEYS,
+        chunk_size = CHUNK_SIZE,
+        verbose = VERBOSE,
     )
     print(f"Saved {len(gdf):,} OSM POIs to {OUTPUT_PATH}")

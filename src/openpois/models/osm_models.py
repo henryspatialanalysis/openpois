@@ -37,6 +37,12 @@ class ModelFactory(ABC):
     A factory for creating models for OSM POI turnover rate estimation.
     """
     def __init__(self, dataset: pd.DataFrame, metadata: dict):
+        """
+        Args:
+            dataset: Raw observations DataFrame.
+            metadata: Dict of model configuration options (e.g., group key,
+                column names, priors).
+        """
         self.raw_data = dataset
         self.model_data = {}
         self.target = None
@@ -54,13 +60,16 @@ class ModelFactory(ABC):
         self.assign_targets()
 
     def validate_inputs(self):
+        """Validate inputs before building the model. Override to add checks."""
         pass
 
     @abstractmethod
     def build_model(self):
+        """Build model components (model_fun, event_rate_type, parameters, etc.)."""
         pass
 
     def assign_targets(self):
+        """Assign target tensor and time tensors from raw_data."""
         self.target = torch.tensor(self.raw_data['changed'].values)
         t1_col = self.metadata.get('t1_col', 't1')
         self.t1 = torch.tensor(self.raw_data[t1_col].values)
@@ -76,6 +85,7 @@ def simple_model(params: torch.Tensor) -> torch.Tensor:
     """
     return torch.exp(params)
 
+
 def pseudo_varying_model(params: torch.Tensor) -> callable:
     """
     A pseudo-varying model for the change rate λ: λ = exp(θ). This model is the same as
@@ -85,8 +95,10 @@ def pseudo_varying_model(params: torch.Tensor) -> callable:
     Note that time-varying models always return a function λ(t) rather than a scalar.
     """
     def f_t(t: torch.Tensor) -> torch.Tensor:
+        """Return the event rate as a time-constant tensor shaped like t."""
         return torch.exp(params).repeat(t.shape).reshape(list(t.shape) + [-1])
     return f_t
+
 
 def default_param_likelihood(params: torch.Tensor) -> torch.Tensor:
     """
@@ -94,26 +106,34 @@ def default_param_likelihood(params: torch.Tensor) -> torch.Tensor:
     """
     return torch.tensor(0.0, requires_grad = True)
 
+
 class ConstantModel(ModelFactory):
     """
     A constant model for the change rate λ: λ = exp(θ).
     """
+
     def build_model(self):
+        """Build a constant-rate model with a single log-lambda parameter."""
         self.model_fun = simple_model
         self.event_rate_type = 'constant'
         self.param_likelihood = default_param_likelihood
         self.parameters = torch.tensor([0.0], requires_grad = True)
         self.param_ids = pd.DataFrame({'param_name': ['log_lambda']})
 
+
 class PseudoVaryingModel(ModelFactory):
     """
-    A pseudo-varying model for the change rate λ: λ = exp(θ). This model is the same as
-    simple_model and should return the same results. It is used to test the time-varying
-    model functionality.
+    A pseudo-varying model for the change rate λ: λ = exp(θ).
 
-    Note that time-varying models always return a function λ(t) rather than a scalar.
+    This model is the same as simple_model and should return the same results.
+    It is used to test the time-varying model functionality.
+
+    Note that time-varying models always return a function λ(t) rather than a
+    scalar.
     """
+
     def build_model(self):
+        """Build a pseudo-varying model with a single log-lambda parameter."""
         self.model_fun = pseudo_varying_model
         self.event_rate_type = 'varying'
         self.param_likelihood = default_param_likelihood
@@ -142,6 +162,7 @@ def random_by_type_model(params: torch.Tensor, group: torch.Tensor) -> torch.Ten
         The change rate λ for each observation.
     """
     return torch.exp(params[0] + params[2 + group])
+
 
 def random_by_type_param_likelihood(
     params: torch.Tensor,
@@ -172,6 +193,7 @@ def random_by_type_param_likelihood(
     ).log_prob(params[2:]).sum()
     return ll
 
+
 class RandomByTypeModel(ModelFactory):
     """
     A random effects model for the change rate λ: λ = exp(θ) + ε, where ε is a random
@@ -180,6 +202,7 @@ class RandomByTypeModel(ModelFactory):
     """
 
     def validate_inputs(self):
+        """Validate that metadata contains a 'group' key present in raw_data."""
         if self.metadata is None or 'group' not in self.metadata:
             raise ValueError("Key 'group' is required in metadata")
         if not isinstance(self.raw_data, pd.DataFrame):
@@ -191,6 +214,7 @@ class RandomByTypeModel(ModelFactory):
             )
 
     def build_model(self):
+        """Build a random-effects model with per-group lambdas."""
         self.model_fun = random_by_type_model
         self.event_rate_type = 'constant'
         self.param_likelihood = partial(
@@ -205,8 +229,8 @@ class RandomByTypeModel(ModelFactory):
             self.raw_data['group_id'].values,
             dtype = torch.int64
         )
-        self.group_lookup = (self
-            .raw_data
+        self.group_lookup = (
+            self.raw_data
             .loc[:, [self.metadata['group'], 'group_id']]
             .rename(columns = {self.metadata['group']: 'group_name'})
             .drop_duplicates()
@@ -231,9 +255,19 @@ MODEL_REGISTRY = {
     "random_by_type": RandomByTypeModel,
 }
 
+
 def get_model_class(model_name: str) -> type[ModelFactory]:
     """
-    Get a model from the model registry.
+    Return a ModelFactory subclass by name from MODEL_REGISTRY.
+
+    Args:
+        model_name: Registry key (e.g., 'constant', 'random_by_type').
+
+    Returns:
+        The corresponding ModelFactory subclass.
+
+    Raises:
+        ValueError: If model_name is not found in MODEL_REGISTRY.
     """
     if model_name not in MODEL_REGISTRY:
         raise ValueError(

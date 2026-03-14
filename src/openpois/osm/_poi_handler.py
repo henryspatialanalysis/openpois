@@ -49,19 +49,48 @@ class POIRecordBuilder:
         self._source_label = source_label
 
     def _extract_tags(self, tags: osmium.osm.TagList) -> dict:
-        """Returns a dict of tag values. If extract_keys is set, only those
-        keys are returned (None for absent keys); otherwise all tags are
-        returned."""
+        """
+        Return a dict of tag values.
+
+        If extract_keys is set, only those keys are returned (None for absent
+        keys); otherwise all tags are returned.
+
+        Args:
+            tags: The tag list from a pyosmium OSM object.
+
+        Returns:
+            Dict mapping tag key strings to their values.
+        """
         if self._extract_keys is not None:
             return {key: tags.get(key) for key in self._extract_keys}
         return {tag.k: tag.v for tag in tags}
 
     def _has_target_tag(self, tags: osmium.osm.TagList) -> bool:
+        """
+        Return True if the element has at least one tag in filter_keys.
+
+        If filter_keys was not set, always returns True.
+
+        Args:
+            tags: The tag list from a pyosmium OSM object.
+
+        Returns:
+            True if the element passes the tag filter.
+        """
         if self._filter_keys is None:
             return True
         return any(key in tags for key in self._filter_keys)
 
     def process_node(self, n: osmium.osm.Node) -> dict | None:
+        """
+        Build a POI record dict from a pyosmium Node object.
+
+        Args:
+            n: A pyosmium Node object.
+
+        Returns:
+            A record dict for the node, or None if it should be skipped.
+        """
         if not self._has_target_tag(n.tags):
             return None
         rec = self._extract_tags(n.tags)
@@ -75,6 +104,19 @@ class POIRecordBuilder:
         return rec
 
     def process_way(self, w: osmium.osm.Way) -> dict | None:
+        """
+        Build a POI record dict from a pyosmium Way object.
+
+        Closed ways (ring polygons) are stored as Polygon geometries;
+        open ways use their centroid as a Point.
+
+        Args:
+            w: A pyosmium Way object.
+
+        Returns:
+            A record dict for the way, or None if it should be skipped or
+            cannot be resolved due to missing node locations.
+        """
         if not self._has_target_tag(w.tags):
             return None
         try:
@@ -100,6 +142,19 @@ class POIRecordBuilder:
         return rec
 
     def process_area(self, a: osmium.osm.Area) -> dict | None:
+        """
+        Build a POI record dict from a pyosmium Area object.
+
+        Only processes relation-derived areas; closed-way areas are already
+        captured by process_way() and are skipped here.
+
+        Args:
+            a: A pyosmium Area object.
+
+        Returns:
+            A record dict for the area, or None if it should be skipped or
+            cannot be resolved due to missing node locations.
+        """
         # Closed ways are already captured by process_way(); only handle
         # relation-derived areas.
         if a.from_way():

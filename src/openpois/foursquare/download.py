@@ -77,10 +77,10 @@ def get_fsq_catalog(
         )
 
     catalog = RestCatalog(
-        name="foursquare",
-        uri=catalog_uri,
-        warehouse=catalog_warehouse,
-        token=token,
+        name = "foursquare",
+        uri = catalog_uri,
+        warehouse = catalog_warehouse,
+        token = token,
     )
     return catalog
 
@@ -187,7 +187,7 @@ def load_fsq_us_places(
 
     # Load categories to build a mapping from category_id to L1 name
     cats_scan = cats_table_obj.scan(
-        selected_fields=(
+        selected_fields = (
             "category_id",
             "level1_category_name",
             "category_label",
@@ -201,8 +201,8 @@ def load_fsq_us_places(
 
     # Load US places (table is unpartitioned; filter by country and open status)
     places_scan = places_table_obj.scan(
-        row_filter="country = 'US' AND date_closed IS NULL",
-        selected_fields=(
+        row_filter = "country = 'US' AND date_closed IS NULL",
+        selected_fields = (
             "fsq_place_id",
             "name",
             "latitude",
@@ -216,6 +216,7 @@ def load_fsq_us_places(
 
     # Resolve L1 category: take the L1 name of the first matching category ID
     def _resolve_l1(cat_ids) -> str | None:
+        """Return the first L1 category name matching a category ID, or None."""
         if cat_ids is None or len(cat_ids) == 0:
             return None
         for cid in cat_ids:
@@ -235,9 +236,11 @@ def load_fsq_us_places(
     places_df.insert(2, "release_date", release_date)
 
     gdf = gpd.GeoDataFrame(
-        places_df.drop(columns=["latitude", "longitude"]),
-        geometry=gpd.points_from_xy(places_df["longitude"], places_df["latitude"]),
-        crs="EPSG:4326",
+        places_df.drop(columns = ["latitude", "longitude"]),
+        geometry = gpd.points_from_xy(
+            places_df["longitude"], places_df["latitude"]
+        ),
+        crs = "EPSG:4326",
     )
     return gdf
 
@@ -287,29 +290,29 @@ def download_foursquare_snapshot(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     catalog = get_fsq_catalog(
-        token=token,
-        catalog_uri=catalog_uri,
-        catalog_warehouse=catalog_warehouse,
-        token_env_var=token_env_var,
+        token = token,
+        catalog_uri = catalog_uri,
+        catalog_warehouse = catalog_warehouse,
+        token_env_var = token_env_var,
     )
 
     if release_date is None:
         print("Detecting latest Foursquare release...")
         release_date = get_latest_fsq_release_date(
             catalog,
-            catalog_namespace=catalog_namespace,
-            places_table=places_table,
+            catalog_namespace = catalog_namespace,
+            places_table = places_table,
         )
         print(f"Using release: {release_date}")
 
     print(f"Loading Foursquare US places for release {release_date}...")
     gdf = load_fsq_us_places(
-        catalog=catalog,
-        release_date=release_date,
-        l1_category_names=l1_category_names,
-        catalog_namespace=catalog_namespace,
-        places_table=places_table,
-        categories_table=categories_table,
+        catalog = catalog,
+        release_date = release_date,
+        l1_category_names = l1_category_names,
+        catalog_namespace = catalog_namespace,
+        places_table = places_table,
+        categories_table = categories_table,
     )
 
     gdf.to_parquet(output_path)

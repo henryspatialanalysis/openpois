@@ -17,7 +17,7 @@ def change_plot_reshape_data(
     no_change_col: str,
     change_col: str,
     final_observation_col: str,
-    day_range: int = 365*10,
+    day_range: int = 365 * 10,
 ) -> pd.DataFrame:
     """
     Reshape data for the change plot. The data comes in with one row per POI-tag, and
@@ -42,7 +42,8 @@ def change_plot_reshape_data(
         day_range: Maximum elapsed time period to plot, in days
 
     Returns:
-        DataFrame where each row is an elapse d
+        DataFrame where each row is an elapsed day count with columns:
+        no_change, unknown, change, aged_out, all, ymin, ymax, day, year.
     """
     reshaped = (
         pd.DataFrame({
@@ -70,11 +71,11 @@ def change_plot_reshape_data(
             ]
         })
         .assign(
-            all=pd.col('no_change') + pd.col('change') + pd.col('unknown'),
-            ymin=pd.col('no_change') / pd.col('all'),
-            ymax=(pd.col('no_change') + pd.col('unknown')) / pd.col('all'),
-            day=np.arange(day_range),
-            year=pd.col('day') / 365,
+            all = pd.col('no_change') + pd.col('change') + pd.col('unknown'),
+            ymin = pd.col('no_change') / pd.col('all'),
+            ymax = (pd.col('no_change') + pd.col('unknown')) / pd.col('all'),
+            day = np.arange(day_range),
+            year = pd.col('day') / 365,
         )
     )
     return reshaped
@@ -89,7 +90,7 @@ def change_plot_create(
     subtitle: str = None,
     x_label: str = '',
     y_label: str = '',
-    day_range: int = 365*10,
+    day_range: int = 365 * 10,
 ) -> gg.ggplot:
     """
     Create a single change plot.
@@ -114,35 +115,37 @@ def change_plot_create(
     """
     year_range = day_range / 365
     reshaped = change_plot_reshape_data(
-        observations=observations,
-        no_change_col=no_change_col,
-        change_col=change_col,
-        final_observation_col=final_observation_col,
-        day_range=day_range
+        observations = observations,
+        no_change_col = no_change_col,
+        change_col = change_col,
+        final_observation_col = final_observation_col,
+        day_range = day_range,
     )
     fig = (
         gg.ggplot(
-            data=reshaped,
-            mapping=gg.aes(x='year', ymin='ymin', ymax='ymax')
+            data = reshaped,
+            mapping = gg.aes(x = 'year', ymin = 'ymin', ymax = 'ymax'),
         ) +
-        gg.geom_ribbon(fill='blue', alpha=0.25) +
-        gg.geom_line(mapping=gg.aes(y='ymin'), color='black', linetype='dashed') +
-        gg.geom_line(mapping=gg.aes(y='ymax'), color='black') +
+        gg.geom_ribbon(fill = 'blue', alpha = 0.25) +
+        gg.geom_line(
+            mapping = gg.aes(y = 'ymin'), color = 'black', linetype = 'dashed'
+        ) +
+        gg.geom_line(mapping = gg.aes(y = 'ymax'), color = 'black') +
         gg.labs(
-            title=title,
-            subtitle=subtitle,
-            x=x_label,
-            y=y_label,
+            title = title,
+            subtitle = subtitle,
+            x = x_label,
+            y = y_label,
         ) +
         gg.scale_y_continuous(
-            limits=(0, 1.01),
-            breaks=np.arange(0, 1.01, 0.25),
-            labels=[f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
+            limits = (0, 1.01),
+            breaks = np.arange(0, 1.01, 0.25),
+            labels = [f"{x * 100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
         ) +
         gg.scale_x_continuous(
-            limits=(0, year_range + 0.01),
-            breaks=np.arange(year_range + 1),
-            labels=[f"{x:.0f}" for x in np.arange(year_range + 1)],
+            limits = (0, year_range + 0.01),
+            breaks = np.arange(year_range + 1),
+            labels = [f"{x:.0f}" for x in np.arange(year_range + 1)],
         ) +
         gg.theme_bw()
     )
@@ -160,7 +163,7 @@ def change_multiplot_create(
     subtitle: str = None,
     x_label: str = '',
     y_label: str = '',
-    day_range: int = 365*10,
+    day_range: int = 365 * 10,
 ) -> gg.ggplot:
     """
     Create a multi-panel change plot.
@@ -195,14 +198,17 @@ def change_multiplot_create(
         obs_sub_tag = obs_sub.query(f"{col} == @tag")
         reshaped_sub = (
             change_plot_reshape_data(
-                observations=obs_sub_tag,
-                no_change_col=no_change_col,
-                change_col=change_col,
-                final_observation_col=final_observation_col,
-                day_range=day_range
+                observations = obs_sub_tag,
+                no_change_col = no_change_col,
+                change_col = change_col,
+                final_observation_col = final_observation_col,
+                day_range = day_range,
             )
             .assign(
-                group=tag.replace("_", " ").title() + f" (N = {obs_sub_tag.shape[0]})"
+                group = (
+                    tag.replace("_", " ").title()
+                    + f" (N = {obs_sub_tag.shape[0]})"
+                ),
             )
         )
         reshaped_list.append(reshaped_sub)
@@ -211,27 +217,27 @@ def change_multiplot_create(
     year_range = day_range / 365
     fig = (
         gg.ggplot(
-            data=reshaped_full,
-            mapping=gg.aes(x='year', color='group')
+            data = reshaped_full,
+            mapping = gg.aes(x = 'year', color = 'group'),
         ) +
-        gg.geom_line(mapping=gg.aes(y='ymin'), linetype='dashed') +
-        gg.geom_line(mapping=gg.aes(y='ymax')) +
+        gg.geom_line(mapping = gg.aes(y = 'ymin'), linetype = 'dashed') +
+        gg.geom_line(mapping = gg.aes(y = 'ymax')) +
         gg.labs(
-            title=title,
-            subtitle=subtitle,
-            x=x_label,
-            y=y_label,
-            color=col.replace("_", " ").title()
+            title = title,
+            subtitle = subtitle,
+            x = x_label,
+            y = y_label,
+            color = col.replace("_", " ").title(),
         ) +
         gg.scale_y_continuous(
-            limits=(0, 1.01),
-            breaks=np.arange(0, 1.01, 0.25),
-            labels=[f"{x*100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
+            limits = (0, 1.01),
+            breaks = np.arange(0, 1.01, 0.25),
+            labels = [f"{x * 100:.0f}%" for x in np.arange(0, 1.01, 0.25)],
         ) +
         gg.scale_x_continuous(
-            limits=(0, year_range + 0.01),
-            breaks=np.arange(year_range + 1),
-            labels=[f"{x:.0f}" for x in np.arange(year_range + 1)],
+            limits = (0, year_range + 0.01),
+            breaks = np.arange(year_range + 1),
+            labels = [f"{x:.0f}" for x in np.arange(year_range + 1)],
         ) +
         gg.theme_bw()
     )

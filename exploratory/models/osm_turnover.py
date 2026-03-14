@@ -23,8 +23,10 @@ DATA_DIR = config.get_dir_path("osm_data")
 MODEL_DIR = config.get_dir_path("model_output")
 TAG_KEY = config.get("osm_turnover_model", "tag_key")
 GROUP_KEY = config.get("osm_turnover_model", "group_key", fail_if_none = False)
-GROUP_VALUES = config.get("osm_turnover_model", "group_values", fail_if_none =False)
-MIN_VALUE_COUNT = config.get("osm_turnover_model", "min_value_count", fail_if_none = False)
+GROUP_VALUES = config.get("osm_turnover_model", "group_values", fail_if_none = False)
+MIN_VALUE_COUNT = config.get(
+    "osm_turnover_model", "min_value_count", fail_if_none = False
+)
 N_DRAWS = config.get("osm_turnover_model", "n_draws")
 SAVE_FULL_MODEL = config.get("osm_turnover_model", "save_full_model")
 
@@ -88,7 +90,7 @@ if __name__ == "__main__":
 
     # Predictions are done by group for random effects models
     predict_times = torch.tensor(np.arange(11), dtype = torch.float64).reshape(-1, 1)
-    if(model_type == 'random_by_type'):
+    if model_type == 'random_by_type':
         n_periods = predict_times.shape[0]
         n_groups = model.model_data['group'].max() + 1
         predict_times = predict_times.repeat(n_groups, 1)

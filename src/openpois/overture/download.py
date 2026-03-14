@@ -58,7 +58,7 @@ def get_latest_release_date(
         f"https://{bucket}.s3.amazonaws.com"
         "/?list-type=2&prefix=release%2F&delimiter=%2F"
     )
-    resp = requests.get(s3_list_url, timeout=30)
+    resp = requests.get(s3_list_url, timeout = 30)
     resp.raise_for_status()
 
     root = ET.fromstring(resp.text)
@@ -153,10 +153,10 @@ def download_overture_snapshot(
 
     if release_date is None:
         print("Detecting latest Overture release...")
-        release_date = get_latest_release_date(bucket=bucket)
+        release_date = get_latest_release_date(bucket = bucket)
         print(f"Using release: {release_date}")
 
-    s3_path = build_overture_s3_path(release_date, bucket=bucket)
+    s3_path = build_overture_s3_path(release_date, bucket = bucket)
 
     categories_sql = ", ".join(f"'{c}'" for c in taxonomy_l0_categories)
 
@@ -192,9 +192,9 @@ def download_overture_snapshot(
 
     print(f"Downloaded {len(df):,} Overture places. Building GeoDataFrame...")
     gdf = gpd.GeoDataFrame(
-        df.drop(columns=["longitude", "latitude"]),
-        geometry=gpd.points_from_xy(df["longitude"], df["latitude"]),
-        crs="EPSG:4326",
+        df.drop(columns = ["longitude", "latitude"]),
+        geometry = gpd.points_from_xy(df["longitude"], df["latitude"]),
+        crs = "EPSG:4326",
     )
 
     gdf.to_parquet(output_path)

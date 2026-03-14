@@ -288,6 +288,7 @@ def download_element_histories(
             element to download history for.
         timeout: The timeout for each request in seconds.
         progress: Whether to print progress messages.
+
     Returns:
         A tuple containing:
         - A DataFrame with all version metadata for all elements.

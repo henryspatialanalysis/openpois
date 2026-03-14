@@ -26,9 +26,18 @@ N_ROWS = 100
 # -----------------------------------------------------------------------------
 
 def load_head(path, n = N_ROWS) -> gpd.GeoDataFrame:
-    """Read the first `n` rows from a GeoParquet file without loading it all."""
+    """
+    Read the first n rows from a GeoParquet file without loading it all.
+
+    Args:
+        path: Path to the GeoParquet file.
+        n: Number of rows to read.
+
+    Returns:
+        GeoDataFrame with the first n rows.
+    """
     pf = pq.ParquetFile(path)
-    batch = next(pf.iter_batches(batch_size=n))
+    batch = next(pf.iter_batches(batch_size = n))
     return gpd.GeoDataFrame.from_arrow(pa.Table.from_batches([batch]))
 
 

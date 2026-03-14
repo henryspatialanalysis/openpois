@@ -42,18 +42,24 @@ def fig_save(
     fig: gg.ggplot, stub: str, width: float = 10, height: float = 6, **kwargs
 ) -> None:
     """
-    Helper function to save a ggplot figure
+    Save a ggplot figure as a PNG file to VIZ_DIR.
+
+    Args:
+        fig: The ggplot figure to save.
+        stub: Output filename stem (without extension).
+        width: Figure width in inches.
+        height: Figure height in inches.
+        **kwargs: Additional keyword arguments forwarded to fig.save().
     """
     fig.save(
-        filename=VIZ_DIR / f"{stub}.png",
-        width=width,
-        height=height,
-        units='in',
-        dpi=300,
-        verbose=False,
+        filename = VIZ_DIR / f"{stub}.png",
+        width = width,
+        height = height,
+        units = 'in',
+        dpi = 300,
+        verbose = False,
         **kwargs
     )
-    return None
 
 
 # ----------------------------------------------------------------------------------------
@@ -67,15 +73,15 @@ if __name__ == "__main__":
     timestamp_cols = config.get("osm_data", "timestamp_cols")
     observations_df = (
         pd.read_csv(SAVE_DIR / f"osm_observations_{TAG_KEY}.csv")
-        .dropna(subset=timestamp_cols)
+        .dropna(subset = timestamp_cols)
     )
     for timestamp_col in timestamp_cols:
         observations_df[timestamp_col] = pd.to_datetime(observations_df[timestamp_col])
     # Add a column that is 1 for the highest value of 'version' within each 'id' grouping
     observations_df['latest_version'] = (
-        observations_df.groupby('id')['version'].transform(
-            lambda x: x == x.max()
-        ).astype(int)
+        observations_df.groupby('id')['version']
+        .transform(lambda x: x == x.max())
+        .astype(int)
     )
     # Prepare timediffs in days:
     # no_change: Time elapsed until the final confirmation of the previous tag
@@ -105,31 +111,33 @@ if __name__ == "__main__":
     to_plot_df = pd.concat([changed_tags, unchanged_tags])
     # Create a plot for all tags
     fig = change_plot_create(
-        observations=to_plot_df,
-        no_change_col='no_change',
-        change_col='change',
-        final_observation_col='final_obs',
-        day_range=max_days,
-        title=f"Stability of the `{TAG_KEY}` tag over time",
-        x_label="Years since tag",
-        y_label="Proportion remaining unchanged",
+        observations = to_plot_df,
+        no_change_col = 'no_change',
+        change_col = 'change',
+        final_observation_col = 'final_obs',
+        day_range = max_days,
+        title = f"Stability of the `{TAG_KEY}` tag over time",
+        x_label = "Years since tag",
+        y_label = "Proportion remaining unchanged",
     )
-    fig_save(fig, stub=f"osm_changes_{TAG_KEY}_all")
+    fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all")
 
     # Create multi-panel plots for the top tags in each OSM category
     TOP_N_TYPES = config.get("osm_data", "top_n_types")
     for subtype in OSM_KEYS:
         fig = change_multiplot_create(
-            observations=to_plot_df,
-            col=subtype,
-            top_n=TOP_N_TYPES,
-            no_change_col='no_change',
-            change_col='change',
-            final_observation_col='final_obs',
-            title=f"Stability of the `{TAG_KEY}` tag over time by {subtype}",
-            subtitle=f"Top {TOP_N_TYPES} {subtype} tags by number of observations",
-            x_label="Years since tag",
-            y_label="Proportion remaining unchanged",
-            day_range=max_days,
+            observations = to_plot_df,
+            col = subtype,
+            top_n = TOP_N_TYPES,
+            no_change_col = 'no_change',
+            change_col = 'change',
+            final_observation_col = 'final_obs',
+            title = f"Stability of the `{TAG_KEY}` tag over time by {subtype}",
+            subtitle = (
+                f"Top {TOP_N_TYPES} {subtype} tags by number of observations"
+            ),
+            x_label = "Years since tag",
+            y_label = "Proportion remaining unchanged",
+            day_range = max_days,
         )
-        fig_save(fig=fig, stub=f"osm_changes_{TAG_KEY}_{subtype}")
+        fig_save(fig = fig, stub = f"osm_changes_{TAG_KEY}_{subtype}")

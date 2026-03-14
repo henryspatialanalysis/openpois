@@ -338,15 +338,15 @@ def download_osm_snapshot(
     output_path = Path(output_path)
 
     download_pbf(
-        url=pbf_url,
-        output_path=raw_pbf_path,
-        overwrite=overwrite_download
+        url = pbf_url,
+        output_path = raw_pbf_path,
+        overwrite = overwrite_download,
     )
     filter_pbf(
-        input_pbf=raw_pbf_path,
-        output_pbf=filtered_pbf_path,
-        osm_keys=osm_keys,
-        overwrite=overwrite_filter,
+        input_pbf = raw_pbf_path,
+        output_pbf = filtered_pbf_path,
+        osm_keys = osm_keys,
+        overwrite = overwrite_filter,
     )
     extract_keys = None if keep_all_keys else osm_keys
     gdf = parse_pbf_to_geodataframe(

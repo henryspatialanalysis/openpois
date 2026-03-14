@@ -75,6 +75,19 @@ class ModelFitter:
         t2: torch.Tensor = None,
         **kwargs
     ):
+        """
+        Calculate change rates for all observations given params.
+
+        Args:
+            params: Parameter tensor to evaluate.
+            data: Dict of covariate tensors. Defaults to self.data.
+            t1: Start times. Defaults to self.t1.
+            t2: End times. Defaults to self.t2.
+            **kwargs: Additional keyword arguments forwarded to event_rate.
+
+        Returns:
+            Tensor of change rates for each observation.
+        """
         if t1 is None:
             t1 = self.t1
         if t2 is None:
@@ -88,6 +101,17 @@ class ModelFitter:
         )
 
     def calculate_probs(self, params: torch.Tensor, **kwargs):
+        """
+        Calculate change probabilities for all observations given params.
+
+        Args:
+            params: Parameter tensor to evaluate.
+            **kwargs: Additional keyword arguments forwarded to
+                calculate_change_rates.
+
+        Returns:
+            Tensor of change probabilities clamped to (EPSILON, 1 - EPSILON).
+        """
         change_rates = self.calculate_change_rates(params = params, **kwargs)
         probs = (
             (1.0 - torch.exp(-1.0 * change_rates))
@@ -97,6 +121,16 @@ class ModelFitter:
         return probs
 
     def calculate_nll(self, params: torch.Tensor, **kwargs):
+        """
+        Calculate the negative log-likelihood for the given params.
+
+        Args:
+            params: Parameter tensor to evaluate.
+            **kwargs: Additional keyword arguments forwarded to calculate_probs.
+
+        Returns:
+            Scalar tensor representing the negative log-likelihood.
+        """
         probs = self.calculate_probs(params = params, **kwargs)
         ll = torch.sum(
             self.target * torch.log(probs) +
@@ -107,6 +141,12 @@ class ModelFitter:
         return -1.0 * ll
 
     def fit(self):
+        """
+        Fit the model using L-BFGS optimization.
+
+        Minimizes the negative log-likelihood with respect to self.starting_params.
+        Sets self.fitted_params, self.fitted_probs, and self.model_finished.
+        """
         nll_partial = partial(self.calculate_nll, data = self.data)
         self.model_fit = torchmin.minimize(
             fun = nll_partial,
@@ -167,6 +207,15 @@ class ModelFitter:
         self.param_draws = draws
 
     def get_parameter_draws(self):
+        """
+        Return the previously generated parameter draw tensor.
+
+        Returns:
+            Tensor of shape (n_params, n_draws).
+
+        Raises:
+            ValueError: If generate_parameter_draws() has not been run yet.
+        """
         if self.param_draws is None:
             raise ValueError("Run generate_parameter_draws() first")
         return self.param_draws
@@ -182,7 +231,18 @@ class ModelFitter:
         ui_width: float = 0.95,
     ):
         """
-        Get a table of parameter draws.
+        Return a summary table of parameter draws.
+
+        Args:
+            ui_width: Width of the uncertainty interval. Must be in (0, 1).
+
+        Returns:
+            DataFrame with columns 'mean', 'lower', 'upper', one row per
+            parameter.
+
+        Raises:
+            ValueError: If generate_parameter_draws() has not been run, or
+                if ui_width is outside (0, 1).
         """
         if self.param_draws is None:
             raise ValueError("Run generate_parameter_draws() first")
@@ -193,8 +253,12 @@ class ModelFitter:
         return pd.DataFrame(
             {
                 'mean': self._to_table(self.param_draws.mean(dim = 1)),
-                'lower': self._to_table(self.param_draws.quantile(q = lb, dim = 1)),
-                'upper': self._to_table(self.param_draws.quantile(q = ub, dim = 1)),
+                'lower': self._to_table(
+                    self.param_draws.quantile(q = lb, dim = 1)
+                ),
+                'upper': self._to_table(
+                    self.param_draws.quantile(q = ub, dim = 1)
+                ),
             }
         )
 
@@ -206,6 +270,26 @@ class ModelFitter:
         ui_width: float = 0.95,
         **kwargs
     ):
+        """
+        Generate change probability predictions using posterior parameter draws.
+
+        If t1, t2, and data are all omitted, uses the training data stored on
+        self. If only t2 is provided, t1 defaults to zeros.
+
+        Args:
+            t1: Start times tensor. Defaults to self.t1 when t2/data are also
+                omitted; otherwise zeros matching t2.
+            t2: End times tensor.
+            data: Dict of covariate tensors.
+            ui_width: Width of the uncertainty interval. Must be in (0, 1).
+            **kwargs: Additional keyword arguments forwarded to calculate_probs.
+
+        Returns:
+            DataFrame with columns t1, t2, p_mean, p_lower, p_upper.
+
+        Raises:
+            ValueError: If generate_parameter_draws() has not been run.
+        """
         if self.param_draws is None:
             raise ValueError("Run generate_draws() first")
         if (t1 is None) and (t2 is None) and (len(data) == 0):
@@ -227,8 +311,8 @@ class ModelFitter:
             {
                 't1': self._to_table(t1),
                 't2': self._to_table(t2),
-                'p_mean': self._to_table(probs.mean(dim=1)),
-                'p_lower': self._to_table(probs.quantile(q=lb, dim=1)),
-                'p_upper': self._to_table(probs.quantile(q=ub, dim=1)),
+                'p_mean': self._to_table(probs.mean(dim = 1)),
+                'p_lower': self._to_table(probs.quantile(q = lb, dim = 1)),
+                'p_upper': self._to_table(probs.quantile(q = ub, dim = 1)),
             }
         )
