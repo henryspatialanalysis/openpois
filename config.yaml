@@ -9,7 +9,7 @@ versions:
 # Settings for downloading data
 download:
   general:
-    timeout: 1000
+    timeout: 1_000
     bbox:
       xmin: -125.0
       ymin: 24.5
@@ -20,11 +20,17 @@ download:
     end_date: 2025-12-31
     date_interval_days: 7
     pbf_url: "https://download.geofabrik.de/north-america/us-latest.osm.pbf"
-  download_keys:
-    - amenity
-    - shop
-    - healthcare
-    - leisure
+    overwrite_download: false
+    overwrite_filter: false
+    source_label: "osm"
+    keep_all_keys: true
+    chunk_size: 200_000
+    verbose: true
+    download_keys:
+      - amenity
+      - shop
+      - healthcare
+      - leisure
   overture:
     release_date: null  # null = auto-detect latest
     s3_bucket: "overturemaps-us-west-2"

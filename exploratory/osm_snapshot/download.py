@@ -18,7 +18,13 @@ from openpois.osm.snapshot import download_osm_snapshot
 config = Config("~/repos/openpois/config.yaml")
 
 PBF_URL = config.get("download", "osm", "pbf_url")
-OSM_KEYS = config.get("download", "download_keys")
+OSM_KEYS = config.get("download", "osm", "download_keys")
+OVERWRITE_DOWNLOAD = config.get("download", "osm", "overwrite_download")
+OVERWRITE_FILTER = config.get("download", "osm", "overwrite_filter")
+SOURCE_LABEL = config.get("download", "osm", "source_label")
+KEEP_ALL_KEYS = config.get("download", "osm", "keep_all_keys")
+CHUNK_SIZE = config.get("download", "osm", "chunk_size")
+VERBOSE = config.get("download", "osm", "verbose")
 SAVE_DIR = config.get_dir_path("snapshot_osm")
 
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,5 +45,11 @@ if __name__ == "__main__":
         filtered_pbf_path=FILTERED_PBF,
         output_path=OUTPUT_PATH,
         osm_keys=OSM_KEYS,
+        overwrite_download=OVERWRITE_DOWNLOAD,
+        overwrite_filter=OVERWRITE_FILTER,
+        source_label=SOURCE_LABEL,
+        keep_all_keys=KEEP_ALL_KEYS,
+        chunk_size=CHUNK_SIZE,
+        verbose=VERBOSE,
     )
     print(f"Saved {len(gdf):,} OSM POIs to {OUTPUT_PATH}")

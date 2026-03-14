@@ -35,7 +35,8 @@ import geopandas as gpd
 import osmium
 import pandas as pd
 import requests
-from shapely.geometry import LineString, Point, Polygon
+
+from openpois.osm._poi_handler import POIRecordBuilder, _POIHandler
 
 
 # -----------------------------------------------------------------------------
@@ -107,10 +108,10 @@ def filter_pbf(
     overwrite: bool = False,
 ) -> Path:
     """
-    Runs osmium tags-filter to extract nodes and ways matching the given keys.
+    Runs osmium tags-filter to extract nodes, ways, and relations matching the given keys.
 
     Constructs and runs a command of the form:
-        osmium tags-filter -o {output_pbf} {input_pbf} nw/{key1} nw/{key2} ...
+        osmium tags-filter -o {output_pbf} {input_pbf} nwr/{key1} nwr/{key2} ...
 
     The referenced nodes for matched ways are retained so that way geometries
     can be resolved by pyosmium in a subsequent step.
@@ -139,8 +140,10 @@ def filter_pbf(
     osmium_bin = (
         shutil.which("osmium") or (str(_env_bin) if _env_bin.exists() else "osmium")
     )
-    key_args = [f"nw/{key}" for key in osm_keys]
-    cmd = [osmium_bin, "tags-filter", "-o", str(output_pbf), str(input_pbf)] + key_args
+    key_args = [f"nwr/{key}" for key in osm_keys]
+    cmd = [
+        osmium_bin, "tags-filter", "--overwrite", "-o", str(output_pbf), str(input_pbf)
+    ] + key_args
     print(f"Running: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
     print(f"Filtered PBF written to {output_pbf}")
@@ -152,101 +155,133 @@ def filter_pbf(
 # -----------------------------------------------------------------------------
 
 
-class _POIHandler(osmium.SimpleHandler):
-    """
-    pyosmium handler that collects nodes and ways with matching tag keys.
-    """
-
-    def __init__(self, osm_keys: list[str], source_label: str) -> None:
-        super().__init__()
-        self._osm_keys = set(osm_keys)
-        self._source_label = source_label
-        self.records: list[dict] = []
-
-    def _extract_tags(self, tags: osmium.osm.TagList) -> dict:
-        """Returns a dict of target-key tag values (None if absent)."""
-        return {key: tags.get(key) for key in self._osm_keys}
-
-    def _has_target_tag(self, tags: osmium.osm.TagList) -> bool:
-        return any(key in tags for key in self._osm_keys)
-
-    def node(self, n: osmium.osm.Node) -> None:
-        if not self._has_target_tag(n.tags):
-            return
-        rec = {
-            "source": self._source_label,
-            "osm_id": n.id,
-            "osm_type": "node",
-            "name": n.tags.get("name"),
-            "geometry": Point(n.location.lon, n.location.lat),
-        }
-        rec.update(self._extract_tags(n.tags))
-        self.records.append(rec)
-
-    def way(self, w: osmium.osm.Way) -> None:
-        if not self._has_target_tag(w.tags):
-            return
-        try:
-            coords = [(nd.lon, nd.lat) for nd in w.nodes]
-        except osmium.InvalidLocationError:
-            return
-        if len(coords) < 2:
-            return
-
-        if coords[0] == coords[-1] and len(coords) >= 4:
-            geom = Polygon(coords)
-        else:
-            geom = LineString(coords).centroid
-
-        rec = {
-            "source": self._source_label,
-            "osm_id": w.id,
-            "osm_type": "way",
-            "name": w.tags.get("name"),
-            "geometry": geom,
-        }
-        rec.update(self._extract_tags(w.tags))
-        self.records.append(rec)
+def _flush_chunk(
+    records: list[dict],
+    chunk_dir: Path,
+    chunk_idx: int,
+) -> Path:
+    """Write a list of record dicts to a temporary GeoParquet chunk file."""
+    df = pd.DataFrame(records)
+    gdf = gpd.GeoDataFrame(df, geometry = "geometry", crs = "EPSG:4326")
+    chunk_path = chunk_dir / f"chunk_{chunk_idx:04d}.parquet"
+    gdf.to_parquet(chunk_path)
+    return chunk_path
 
 
 def parse_pbf_to_geodataframe(
     pbf_path: Path,
-    osm_keys: list[str],
+    filter_keys: list[str] | None = None,
+    extract_keys: list[str] | None = None,
     source_label: str = "osm",
+    chunk_size: int = 500_000,
+    verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
     Parses a filtered PBF file with pyosmium and returns a GeoDataFrame.
 
-    Processes nodes as Point geometries and closed ways as Polygon geometries
-    (open ways use their centroid). Node location resolution for ways requires
-    that the PBF was NOT filtered with --omit-referenced, so that referenced
-    node coordinates are present in the file.
+    Uses ``osmium.FileProcessor`` with a disk-backed location index and
+    writes records in chunks to temporary parquet files to avoid exhausting
+    memory on large extracts.
+
+    Processes nodes as Point geometries, closed ways as Polygon geometries
+    (open ways use their centroid), and multipolygon relations as
+    Polygon/MultiPolygon geometries. Node location resolution requires that
+    the PBF was NOT filtered with --omit-referenced so that referenced node
+    coordinates are present in the file.
 
     Args:
         pbf_path: Path to the (pre-filtered) PBF file.
-        osm_keys: Tag keys to extract as individual columns. Each key becomes
-            a nullable string column containing the tag value for that element.
+        filter_keys: Tag keys used to decide which elements to keep. An
+            element is accepted if it has at least one of these keys. If
+            None, all elements are accepted.
+        extract_keys: Tag keys to include as output columns (None for
+            absent values). If None, all tags on accepted elements are
+            extracted.
         source_label: Value written to the 'source' column.
+        chunk_size: Number of POI records to accumulate before flushing to a
+            temporary parquet file. Lower values reduce peak memory usage.
+        verbose: If True, log progress after each chunk is flushed.
 
     Returns:
         GeoDataFrame with columns:
-            source, osm_id (int64), osm_type, one column per osm_key,
-            name, geometry. CRS is EPSG:4326.
+            source, osm_id (int64), osm_type ('node'|'way'|'relation'),
+            tag columns, name, geometry. CRS is EPSG:4326.
     """
-    handler = _POIHandler(osm_keys=osm_keys, source_label=source_label)
-    print(f"Parsing {pbf_path} with pyosmium...")
-    handler.apply_file(str(pbf_path), locations=True)
-
-    if not handler.records:
-        return gpd.GeoDataFrame(
-            columns=["source", "osm_id", "osm_type", "name", "geometry"] + osm_keys,
-            geometry="geometry",
-            crs="EPSG:4326",
+    builder = POIRecordBuilder(
+        source_label = source_label,
+        filter_keys = filter_keys,
+        extract_keys = extract_keys,
+    )
+    if verbose:
+        print(
+            f"Parsing {pbf_path} with pyosmium"
+            f" (chunk_size={chunk_size:,})..."
         )
 
-    df = pd.DataFrame(handler.records)
-    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-    print(f"Parsed {len(gdf):,} OSM POIs ({gdf['osm_type'].value_counts().to_dict()})")
+    with tempfile.TemporaryDirectory(
+        prefix = "osm_chunks_"
+    ) as tmp_dir:
+        chunk_dir = Path(tmp_dir)
+        records: list[dict] = []
+        chunk_idx = 0
+        total_records = 0
+
+        loc_cache = str(chunk_dir / "locations.dat")
+        fp = osmium.FileProcessor(str(pbf_path)) \
+            .with_locations(f"sparse_file_array,{loc_cache}") \
+            .with_areas()
+
+        for obj in fp:
+            rec = None
+            if obj.is_node():
+                rec = builder.process_node(obj)
+            elif obj.is_way():
+                rec = builder.process_way(obj)
+            elif obj.is_area():
+                rec = builder.process_area(obj)
+
+            if rec is not None:
+                records.append(rec)
+                if len(records) >= chunk_size:
+                    _flush_chunk(records, chunk_dir, chunk_idx)
+                    total_records += len(records)
+                    if verbose:
+                        print(
+                            f"  Finished chunk {chunk_idx}"
+                            f" ({total_records:,} records so far)"
+                        )
+                    records.clear()
+                    chunk_idx += 1
+
+        # Flush remaining records
+        if records:
+            _flush_chunk(records, chunk_dir, chunk_idx)
+            total_records += len(records)
+            chunk_idx += 1
+
+        if total_records == 0:
+            extra_cols = list(osm_keys) if osm_keys is not None else []
+            return gpd.GeoDataFrame(
+                columns = [
+                    "source", "osm_id", "osm_type", "name", "geometry"
+                ] + extra_cols,
+                geometry = "geometry",
+                crs = "EPSG:4326",
+            )
+
+        # Read and concatenate all chunk files
+        chunk_files = sorted(chunk_dir.glob("chunk_*.parquet"))
+        gdf = pd.concat(
+            [gpd.read_parquet(f) for f in chunk_files],
+            ignore_index = True,
+        )
+        gdf = gpd.GeoDataFrame(gdf, geometry = "geometry", crs = "EPSG:4326")
+
+    if verbose:
+        print(
+            f"Parsed {len(gdf):,} OSM POIs"
+            f" ({gdf['osm_type'].value_counts().to_dict()})"
+        )
     return gdf
 
 
@@ -264,6 +299,9 @@ def download_osm_snapshot(
     overwrite_download: bool = False,
     overwrite_filter: bool = False,
     source_label: str = "osm",
+    keep_all_keys: bool = False,
+    chunk_size: int = 500_000,
+    verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
     End-to-end orchestrator: download PBF, filter to POIs, parse, save GeoParquet.
@@ -282,27 +320,42 @@ def download_osm_snapshot(
         raw_pbf_path: Local path to store the downloaded raw PBF.
         filtered_pbf_path: Local path to store the filtered PBF.
         output_path: Path to write the output GeoParquet file.
-        osm_keys: OSM tag keys to filter on and extract as columns.
+        osm_keys: OSM tag keys used to filter elements in the PBF. Elements
+            lacking all of these keys are excluded.
         overwrite_download: Re-download even if raw_pbf_path exists.
         overwrite_filter: Re-filter even if filtered_pbf_path exists.
         source_label: Value for the output 'source' column.
+        keep_all_keys: If True, all OSM tags are retained as columns in the
+            output GeoDataFrame, not just those in osm_keys. osm_keys is still
+            used to filter which elements are included.
+        chunk_size: Number of POI records per temporary parquet chunk during
+            parsing. Lower values reduce peak memory usage.
+        verbose: If True, log progress after each chunk is flushed.
 
     Returns:
         GeoDataFrame written to output_path.
     """
     output_path = Path(output_path)
 
-    download_pbf(url=pbf_url, output_path=raw_pbf_path, overwrite=overwrite_download)
+    download_pbf(
+        url=pbf_url,
+        output_path=raw_pbf_path,
+        overwrite=overwrite_download
+    )
     filter_pbf(
         input_pbf=raw_pbf_path,
         output_pbf=filtered_pbf_path,
         osm_keys=osm_keys,
         overwrite=overwrite_filter,
     )
+    extract_keys = None if keep_all_keys else osm_keys
     gdf = parse_pbf_to_geodataframe(
-        pbf_path=filtered_pbf_path,
-        osm_keys=osm_keys,
-        source_label=source_label,
+        pbf_path = filtered_pbf_path,
+        filter_keys = osm_keys,
+        extract_keys = extract_keys,
+        source_label = source_label,
+        chunk_size = chunk_size,
+        verbose = verbose,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
