@@ -6,12 +6,9 @@
 """
 pyosmium utilities for collecting POI records from OSM PBF files.
 
-Provides two interfaces:
-- ``POIRecordBuilder`` — a plain class whose ``process_*`` methods accept
-  individual pyosmium objects and return a record dict (or ``None``).
-  Designed for use with ``osmium.FileProcessor``.
-- ``_POIHandler`` — a thin ``SimpleHandler`` wrapper around
-  ``POIRecordBuilder`` for backward compatibility with ``apply_file``.
+``POIRecordBuilder`` — a plain class whose ``process_*`` methods accept
+individual pyosmium objects and return a record dict (or ``None``).
+Designed for use with ``osmium.FileProcessor``.
 """
 from __future__ import annotations
 
@@ -67,14 +64,14 @@ class POIRecordBuilder:
     def process_node(self, n: osmium.osm.Node) -> dict | None:
         if not self._has_target_tag(n.tags):
             return None
-        rec = {
+        rec = self._extract_tags(n.tags)
+        rec.update({
             "source": self._source_label,
             "osm_id": n.id,
             "osm_type": "node",
             "name": n.tags.get("name"),
             "geometry": Point(n.location.lon, n.location.lat),
-        }
-        rec.update(self._extract_tags(n.tags))
+        })
         return rec
 
     def process_way(self, w: osmium.osm.Way) -> dict | None:
@@ -92,14 +89,14 @@ class POIRecordBuilder:
         else:
             geom = LineString(coords).centroid
 
-        rec = {
+        rec = self._extract_tags(w.tags)
+        rec.update({
             "source": self._source_label,
             "osm_id": w.id,
             "osm_type": "way",
             "name": w.tags.get("name"),
             "geometry": geom,
-        }
-        rec.update(self._extract_tags(w.tags))
+        })
         return rec
 
     def process_area(self, a: osmium.osm.Area) -> dict | None:
@@ -127,48 +124,12 @@ class POIRecordBuilder:
         geom = (
             polygons[0] if len(polygons) == 1 else MultiPolygon(polygons)
         )
-        rec = {
+        rec = self._extract_tags(a.tags)
+        rec.update({
             "source": self._source_label,
             "osm_id": a.orig_id(),
             "osm_type": "relation",
             "name": a.tags.get("name"),
             "geometry": geom,
-        }
-        rec.update(self._extract_tags(a.tags))
+        })
         return rec
-
-
-class _POIHandler(osmium.SimpleHandler):
-    """
-    Thin SimpleHandler wrapper around POIRecordBuilder for backward
-    compatibility with ``apply_file``.
-    """
-
-    def __init__(
-        self,
-        source_label: str,
-        filter_keys: list[str] | None = None,
-        extract_keys: list[str] | None = None,
-    ) -> None:
-        super().__init__()
-        self._builder = POIRecordBuilder(
-            source_label = source_label,
-            filter_keys = filter_keys,
-            extract_keys = extract_keys,
-        )
-        self.records: list[dict] = []
-
-    def node(self, n: osmium.osm.Node) -> None:
-        rec = self._builder.process_node(n)
-        if rec is not None:
-            self.records.append(rec)
-
-    def way(self, w: osmium.osm.Way) -> None:
-        rec = self._builder.process_way(w)
-        if rec is not None:
-            self.records.append(rec)
-
-    def area(self, a: osmium.osm.Area) -> None:
-        rec = self._builder.process_area(a)
-        if rec is not None:
-            self.records.append(rec)

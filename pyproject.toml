@@ -37,7 +37,7 @@ line-length = 90
 
 [tool.flake8]
 max-line-length = 90
-extend-ignore = ["E203", "W503"]
+extend-ignore = ["E203", "E251", "W503"]
 
 [tool.pylint.format]
 max-line-length = 90

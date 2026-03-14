@@ -24,7 +24,7 @@ download:
     overwrite_filter: false
     source_label: "osm"
     keep_all_keys: true
-    chunk_size: 200_000
+    chunk_size: 50_000
     verbose: true
     download_keys:
       - amenity

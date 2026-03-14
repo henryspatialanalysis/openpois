@@ -36,7 +36,7 @@ import osmium
 import pandas as pd
 import requests
 
-from openpois.osm._poi_handler import POIRecordBuilder, _POIHandler
+from openpois.osm._poi_handler import POIRecordBuilder
 
 
 # -----------------------------------------------------------------------------
@@ -260,7 +260,7 @@ def parse_pbf_to_geodataframe(
             chunk_idx += 1
 
         if total_records == 0:
-            extra_cols = list(osm_keys) if osm_keys is not None else []
+            extra_cols = list(extract_keys) if extract_keys is not None else []
             return gpd.GeoDataFrame(
                 columns = [
                     "source", "osm_id", "osm_type", "name", "geometry"

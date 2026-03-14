@@ -6,7 +6,7 @@
 """
 Unit tests for openpois.osm.snapshot.
 
-All external I/O (requests.get, subprocess.run, osmium handler.apply_file)
+All external I/O (requests.get, subprocess.run, osmium.FileProcessor)
 is mocked so tests run in milliseconds without network or filesystem access.
 """
 from __future__ import annotations
@@ -17,8 +17,8 @@ import osmium
 import pytest
 from shapely.geometry import Point, Polygon
 
+from openpois.osm._poi_handler import POIRecordBuilder
 from openpois.osm.snapshot import (
-    _POIHandler,
     download_pbf,
     filter_pbf,
     parse_pbf_to_geodataframe,
@@ -45,6 +45,9 @@ def _make_node(osm_id: int, lon: float, lat: float, tag_dict: dict) -> MagicMock
     node.location.lon = lon
     node.location.lat = lat
     node.tags = _make_tags(tag_dict)
+    node.is_node = MagicMock(return_value=True)
+    node.is_way = MagicMock(return_value=False)
+    node.is_area = MagicMock(return_value=False)
     return node
 
 
@@ -66,6 +69,15 @@ def _make_way(
     way.nodes = _make_way_nodes(coords)
     way.tags = _make_tags(tag_dict)
     return way
+
+
+def _make_file_processor(objects: list) -> MagicMock:
+    """Return a mock osmium.FileProcessor that yields the given objects."""
+    fp = MagicMock()
+    fp.with_locations.return_value = fp
+    fp.with_areas.return_value = fp
+    fp.__iter__ = MagicMock(return_value=iter(objects))
+    return fp
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +159,7 @@ class TestFilterPbf:
         assert result == output_pbf
 
     def test_runs_osmium_command_with_correct_args(self, tmp_path):
-        """Should construct osmium tags-filter command with nw/ prefixed keys."""
+        """Should construct osmium tags-filter command with nwr/ prefixed keys."""
         input_pbf = tmp_path / "in.pbf"
         output_pbf = tmp_path / "out.pbf"
         input_pbf.write_bytes(b"fake")
@@ -159,13 +171,10 @@ class TestFilterPbf:
 
         mock_run.assert_called_once()
         cmd = mock_run.call_args[0][0]
-        # First element is the osmium binary
         assert cmd[1] == "tags-filter"
         assert "-o" in cmd
-        # Each key should appear as nw/{key}
         for key in osm_keys:
-            assert f"nw/{key}" in cmd
-        # check=True must be passed
+            assert f"nwr/{key}" in cmd
         assert mock_run.call_args[1].get("check") is True
 
     def test_overwrites_when_flag_set(self, tmp_path):
@@ -183,107 +192,101 @@ class TestFilterPbf:
 
 
 # ---------------------------------------------------------------------------
-# _POIHandler.node
+# POIRecordBuilder.process_node
 # ---------------------------------------------------------------------------
 
 
-class TestPOIHandlerNode:
-    def test_appends_record_when_tag_matches(self):
-        """node() should add a record with required keys when tag key matches."""
-        handler = _POIHandler(osm_keys=["amenity", "shop"], source_label="osm_test")
+class TestPOIRecordBuilderNode:
+    def test_returns_record_when_tag_matches(self):
+        """process_node() should return a record dict when a filter key matches."""
+        builder = POIRecordBuilder(
+            filter_keys=["amenity", "shop"],
+            extract_keys=["amenity", "shop"],
+            source_label="osm_test",
+        )
         node = _make_node(
             osm_id=42,
             lon=-122.3,
             lat=47.6,
             tag_dict={"amenity": "restaurant", "name": "Good Eats"},
         )
-        handler.node(node)
+        rec = builder.process_node(node)
 
-        assert len(handler.records) == 1
-        rec = handler.records[0]
+        assert rec is not None
         assert rec["osm_id"] == 42
         assert rec["osm_type"] == "node"
         assert rec["source"] == "osm_test"
         assert rec["amenity"] == "restaurant"
-        assert rec["shop"] is None  # key present but no value
+        assert rec["shop"] is None  # in extract_keys but absent from tags
         assert rec["name"] == "Good Eats"
         assert isinstance(rec["geometry"], Point)
         assert rec["geometry"].x == pytest.approx(-122.3)
         assert rec["geometry"].y == pytest.approx(47.6)
 
-    def test_skips_when_no_matching_tag(self):
-        """node() should not append a record when no target key is present."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
-        node = _make_node(
-            osm_id=99,
-            lon=0.0,
-            lat=0.0,
-            tag_dict={"highway": "crossing"},
-        )
-        handler.node(node)
-        assert handler.records == []
+    def test_returns_none_when_no_matching_tag(self):
+        """process_node() should return None when no filter key is present."""
+        builder = POIRecordBuilder(filter_keys=["amenity"], source_label="osm")
+        node = _make_node(osm_id=99, lon=0.0, lat=0.0, tag_dict={"highway": "crossing"})
+        assert builder.process_node(node) is None
 
 
 # ---------------------------------------------------------------------------
-# _POIHandler.way
+# POIRecordBuilder.process_way
 # ---------------------------------------------------------------------------
 
 
-class TestPOIHandlerWay:
+class TestPOIRecordBuilderWay:
     def test_closed_way_produces_polygon(self):
         """A closed way with >= 4 coords should produce a Polygon geometry."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
-        # Closed ring: first == last, len >= 4
+        builder = POIRecordBuilder(
+            filter_keys=["amenity"], extract_keys=["amenity"], source_label="osm"
+        )
         coords = [(-122.0, 47.0), (-121.9, 47.0), (-121.9, 47.1), (-122.0, 47.0)]
         way = _make_way(osm_id=10, coords=coords, tag_dict={"amenity": "school"})
-        handler.way(way)
+        rec = builder.process_way(way)
 
-        assert len(handler.records) == 1
-        assert isinstance(handler.records[0]["geometry"], Polygon)
-        assert handler.records[0]["osm_type"] == "way"
+        assert rec is not None
+        assert isinstance(rec["geometry"], Polygon)
+        assert rec["osm_type"] == "way"
 
     def test_open_way_produces_centroid_point(self):
         """An open way should produce a Point (centroid of LineString)."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
-        # Open way: first != last
+        builder = POIRecordBuilder(
+            filter_keys=["amenity"], extract_keys=["amenity"], source_label="osm"
+        )
         coords = [(-122.0, 47.0), (-121.9, 47.1), (-121.8, 47.2)]
         way = _make_way(osm_id=20, coords=coords, tag_dict={"amenity": "parking"})
-        handler.way(way)
+        rec = builder.process_way(way)
 
-        assert len(handler.records) == 1
-        assert isinstance(handler.records[0]["geometry"], Point)
+        assert rec is not None
+        assert isinstance(rec["geometry"], Point)
 
-    def test_invalid_location_error_is_silently_skipped(self):
-        """way() should swallow InvalidLocationError and append nothing."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
+    def test_invalid_location_error_returns_none(self):
+        """process_way() should return None on InvalidLocationError."""
+        builder = POIRecordBuilder(filter_keys=["amenity"], source_label="osm")
         way = MagicMock()
         way.id = 30
         way.tags = _make_tags({"amenity": "cafe"})
 
-        # Iterating w.nodes raises InvalidLocationError
         def _raising_iter():
             raise osmium.InvalidLocationError("no location")
 
         way.nodes.__iter__ = MagicMock(side_effect=_raising_iter)
+        assert builder.process_way(way) is None
 
-        handler.way(way)
-        assert handler.records == []
-
-    def test_skips_when_no_matching_tag(self):
-        """way() should not append a record when no target key is present."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
+    def test_returns_none_when_no_matching_tag(self):
+        """process_way() should return None when no filter key is present."""
+        builder = POIRecordBuilder(filter_keys=["amenity"], source_label="osm")
         coords = [(-122.0, 47.0), (-121.9, 47.1)]
         way = _make_way(osm_id=40, coords=coords, tag_dict={"highway": "path"})
-        handler.way(way)
-        assert handler.records == []
+        assert builder.process_way(way) is None
 
-    def test_way_with_fewer_than_two_coords_skipped(self):
-        """way() should skip ways with fewer than 2 coordinates."""
-        handler = _POIHandler(osm_keys=["amenity"], source_label="osm")
+    def test_way_with_fewer_than_two_coords_returns_none(self):
+        """process_way() should return None for ways with fewer than 2 coords."""
+        builder = POIRecordBuilder(filter_keys=["amenity"], source_label="osm")
         coords = [(-122.0, 47.0)]
         way = _make_way(osm_id=50, coords=coords, tag_dict={"amenity": "bench"})
-        handler.way(way)
-        assert handler.records == []
+        assert builder.process_way(way) is None
 
 
 # ---------------------------------------------------------------------------
@@ -295,44 +298,49 @@ class TestParsePbfToGeoDataFrame:
     def test_returns_empty_geodataframe_with_correct_schema_when_no_records(
         self, tmp_path
     ):
-        """Should return an empty GeoDataFrame with all expected columns."""
+        """Should return an empty GeoDataFrame with the expected columns."""
         pbf_path = tmp_path / "empty.pbf"
         pbf_path.write_bytes(b"fake")
-        osm_keys = ["amenity", "shop"]
+        extract_keys = ["amenity", "shop"]
 
         with patch(
-            "openpois.osm.snapshot._POIHandler.apply_file"
-        ):  # do nothing on apply_file
-            gdf = parse_pbf_to_geodataframe(pbf_path, osm_keys=osm_keys)
+            "openpois.osm.snapshot.osmium.FileProcessor",
+            return_value=_make_file_processor([]),
+        ):
+            gdf = parse_pbf_to_geodataframe(
+                pbf_path,
+                filter_keys=extract_keys,
+                extract_keys=extract_keys,
+                verbose=False,
+            )
 
         assert len(gdf) == 0
         assert gdf.crs.to_epsg() == 4326
-        for col in ["source", "osm_id", "osm_type", "name", "geometry"] + osm_keys:
+        for col in ["source", "osm_id", "osm_type", "name", "geometry"] + extract_keys:
             assert col in gdf.columns
 
     def test_returns_geodataframe_from_handler_records(self, tmp_path):
-        """Should build a GeoDataFrame from records collected by the handler."""
+        """Should build a GeoDataFrame from records produced by POIRecordBuilder."""
         pbf_path = tmp_path / "pois.pbf"
         pbf_path.write_bytes(b"fake")
-        osm_keys = ["amenity"]
 
-        injected_records = [
-            {
-                "source": "osm",
-                "osm_id": 1,
-                "osm_type": "node",
-                "name": "A Cafe",
-                "geometry": Point(-122.0, 47.0),
-                "amenity": "cafe",
-            }
-        ]
+        fake_node = _make_node(
+            osm_id=1,
+            lon=-122.0,
+            lat=47.0,
+            tag_dict={"amenity": "cafe", "name": "A Cafe"},
+        )
 
-        def _fake_apply_file(handler_self, *args, **kwargs):
-            handler_self.records.extend(injected_records)
-
-        with patch.object(_POIHandler, "apply_file", _fake_apply_file):
+        with patch(
+            "openpois.osm.snapshot.osmium.FileProcessor",
+            return_value=_make_file_processor([fake_node]),
+        ):
             gdf = parse_pbf_to_geodataframe(
-                pbf_path, osm_keys=osm_keys, source_label="osm"
+                pbf_path,
+                filter_keys=["amenity"],
+                extract_keys=["amenity"],
+                source_label="osm",
+                verbose=False,
             )
 
         assert len(gdf) == 1
