@@ -174,6 +174,7 @@ def parse_pbf_to_geodataframe(
     extract_keys: list[str] | None = None,
     source_label: str = "osm",
     chunk_size: int = 500_000,
+    max_area_nodes: int | None = None,
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
@@ -200,6 +201,11 @@ def parse_pbf_to_geodataframe(
         source_label: Value written to the 'source' column.
         chunk_size: Number of POI records to accumulate before flushing to a
             temporary parquet file. Lower values reduce peak memory usage.
+        max_area_nodes: If set, relation-derived areas with more than this
+            many total coordinate nodes are skipped before any Shapely
+            geometry is built. Useful for excluding large multipolygons
+            (parks, admin boundaries) that can exhaust memory. None disables
+            the check.
         verbose: If True, log progress after each chunk is flushed.
 
     Returns:
@@ -211,6 +217,7 @@ def parse_pbf_to_geodataframe(
         source_label = source_label,
         filter_keys = filter_keys,
         extract_keys = extract_keys,
+        max_area_nodes = max_area_nodes,
     )
     if verbose:
         print(
@@ -301,6 +308,7 @@ def download_osm_snapshot(
     source_label: str = "osm",
     keep_all_keys: bool = False,
     chunk_size: int = 500_000,
+    max_area_nodes: int | None = None,
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
@@ -330,6 +338,11 @@ def download_osm_snapshot(
             used to filter which elements are included.
         chunk_size: Number of POI records per temporary parquet chunk during
             parsing. Lower values reduce peak memory usage.
+        max_area_nodes: If set, relation-derived areas with more than this
+            many total coordinate nodes are skipped before any Shapely
+            geometry is built. Useful for excluding large multipolygons
+            (parks, admin boundaries) that can exhaust memory. None disables
+            the check.
         verbose: If True, log progress after each chunk is flushed.
 
     Returns:
@@ -355,6 +368,7 @@ def download_osm_snapshot(
         extract_keys = extract_keys,
         source_label = source_label,
         chunk_size = chunk_size,
+        max_area_nodes = max_area_nodes,
         verbose = verbose,
     )
 

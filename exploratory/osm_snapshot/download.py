@@ -24,6 +24,7 @@ OVERWRITE_FILTER = config.get("download", "osm", "overwrite_filter")
 SOURCE_LABEL = config.get("download", "osm", "source_label")
 KEEP_ALL_KEYS = config.get("download", "osm", "keep_all_keys")
 CHUNK_SIZE = config.get("download", "osm", "chunk_size")
+MAX_AREA_NODES = config.get("download", "osm", "max_area_nodes", fail_if_none = False)
 VERBOSE = config.get("download", "osm", "verbose")
 SAVE_DIR = config.get_dir_path("snapshot_osm")
 
@@ -50,6 +51,7 @@ if __name__ == "__main__":
         source_label = SOURCE_LABEL,
         keep_all_keys = KEEP_ALL_KEYS,
         chunk_size = CHUNK_SIZE,
+        max_area_nodes = MAX_AREA_NODES,
         verbose = VERBOSE,
     )
     print(f"Saved {len(gdf):,} OSM POIs to {OUTPUT_PATH}")

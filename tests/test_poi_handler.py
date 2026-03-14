@@ -591,6 +591,35 @@ class TestProcessArea:
         # name is a fixed base field set before _extract_tags → always present
         assert rec["name"] == "Central Park"
 
+    def test_area_within_node_limit_is_kept(self):
+        """Areas under max_area_nodes are returned normally."""
+        # _rect_ring produces 5 nodes; limit of 10 should pass.
+        builder = POIRecordBuilder(
+            source_label = "test",
+            filter_keys = ["amenity"],
+            max_area_nodes = 10,
+        )
+        area = self._simple_area()
+        assert builder.process_area(area) is not None
+
+    def test_area_exceeding_node_limit_is_skipped(self):
+        """Areas exceeding max_area_nodes are skipped before geometry is built."""
+        # _rect_ring produces 5 nodes; two outer rings = 10 nodes, limit of 9.
+        builder = POIRecordBuilder(
+            source_label = "test",
+            filter_keys = ["amenity"],
+            max_area_nodes = 9,
+        )
+        area = _Area(
+            osm_id = 209,
+            tag_dict = {"amenity": "park"},
+            outer = [
+                _rect_ring(-122.1, 47.0, -122.0, 47.1),
+                _rect_ring(-121.9, 47.0, -121.8, 47.1),
+            ],
+        )
+        assert builder.process_area(area) is None
+
 
 # ---------------------------------------------------------------------------
 # source_label propagation

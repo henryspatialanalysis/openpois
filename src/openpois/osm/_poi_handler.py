@@ -29,6 +29,7 @@ class POIRecordBuilder:
         source_label: str,
         filter_keys: list[str] | None = None,
         extract_keys: list[str] | None = None,
+        max_area_nodes: int | None = None,
     ) -> None:
         """
         Args:
@@ -39,6 +40,12 @@ class POIRecordBuilder:
             extract_keys: Tag keys to include as output columns. Each key
                 becomes a column (None for absent values). If None, all
                 tags on the element are extracted.
+            max_area_nodes: If set, relation-derived areas whose total node
+                count (across all outer and inner rings) exceeds this limit
+                are skipped. Useful for excluding very large multipolygons
+                (parks, admin boundaries) that can exhaust memory. Typical
+                POI building footprints have tens to a few hundred nodes;
+                10_000 is a conservative cutoff. None disables the check.
         """
         self._filter_keys = (
             set(filter_keys) if filter_keys is not None else None
@@ -47,6 +54,7 @@ class POIRecordBuilder:
             set(extract_keys) if extract_keys is not None else None
         )
         self._source_label = source_label
+        self._max_area_nodes = max_area_nodes
 
     def _extract_tags(self, tags: osmium.osm.TagList) -> dict:
         """
@@ -161,19 +169,33 @@ class POIRecordBuilder:
             return None
         if not self._has_target_tag(a.tags):
             return None
+        # Collect all ring coordinate lists up front — osmium iterators are
+        # single-pass, so we must materialise them before counting or looping.
         try:
-            polygons = []
+            outer_rings_data = []
             for outer in a.outer_rings():
                 outer_coords = [(n.lon, n.lat) for n in outer]
-                if len(outer_coords) < 4:
-                    continue
-                inner_rings = [
+                inner_coords_list = [
                     [(n.lon, n.lat) for n in inner]
                     for inner in a.inner_rings(outer)
                 ]
-                polygons.append(Polygon(outer_coords, inner_rings))
+                outer_rings_data.append((outer_coords, inner_coords_list))
         except osmium.InvalidLocationError:
             return None
+        # Optional node-count guard: skip oversized relations before building
+        # any Shapely geometry (which can spike memory for large multipolygons).
+        if self._max_area_nodes is not None:
+            total_nodes = sum(
+                len(outer) + sum(len(inner) for inner in inners)
+                for outer, inners in outer_rings_data
+            )
+            if total_nodes > self._max_area_nodes:
+                return None
+        polygons = []
+        for outer_coords, inner_coords_list in outer_rings_data:
+            if len(outer_coords) < 4:
+                continue
+            polygons.append(Polygon(outer_coords, inner_coords_list))
         if not polygons:
             return None
         geom = (
