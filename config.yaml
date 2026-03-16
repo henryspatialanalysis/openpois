@@ -118,6 +118,7 @@ directories:
       filtered_pbf: us-pois.osm.pbf
       snapshot: osm_snapshot.parquet
       rated_snapshot: osm_snapshot_rated.parquet
+      partitioned: osm_snapshot_partitioned
   snapshot_overture:
     versioned: true
     path: ~/data/openpois/snapshots/overture
@@ -130,3 +131,8 @@ directories:
       osm_snippet: osm_snippet.csv
       overture_snippet: overture_snippet.csv
       foursquare_snippet: foursquare_snippet.csv
+
+# Settings for uploading snapshots to S3
+upload:
+  geohash_precision_partition: 4  # ~39 km x 20 km cells; ~1,000–3,000 cells over CONUS
+  geohash_precision_sort: 6       # ~0.6 km x 1.2 km; fine-grained sort within each partition
