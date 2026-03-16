@@ -89,7 +89,10 @@ if __name__ == "__main__":
         )
 
     # Predictions are done by group for random effects models
-    predict_times = torch.tensor(np.arange(11), dtype = torch.float64).reshape(-1, 1)
+    predict_times = torch.tensor(
+        np.arange(101) / 10,
+        dtype = torch.float64
+    ).reshape(-1, 1)
     if model_type == 'random_by_type':
         n_periods = predict_times.shape[0]
         n_groups = model.model_data['group'].max() + 1
