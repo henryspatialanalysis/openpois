@@ -49,7 +49,9 @@ export function buildOsmQuery(bbox, enabledKeys) {
         ST_Y(ST_Centroid(geometry)) AS lat
       FROM read_parquet([${urlList}], union_by_name = true)
       WHERE (${keyFilters || '1=1'})
-        AND NOT (amenity IN ('parking', 'bicycle_parking'))
+        AND NOT (amenity IN (
+          'parking', 'bicycle_parking', 'toilet', 'bench', 'clock', 'waste_basket'
+        ))
     )
     SELECT * FROM pts
     WHERE lon BETWEEN ${bbox.minLon} AND ${bbox.maxLon}
