@@ -20,6 +20,9 @@ FOURSQUARE_PATH = config.get_file_path("snapshot_foursquare", "snapshot")
 
 N_ROWS = 100
 
+TESTING_DIR = config.get_dir_path("testing")
+TESTING_DIR.mkdir(parents = True, exist_ok = True)
+
 
 # -----------------------------------------------------------------------------
 # Helper
@@ -51,19 +54,19 @@ if __name__ == "__main__":
     osm = load_head(OSM_PATH)
     print(f"Columns: {list(osm.columns)}\n")
     config.write(
-        osm.drop_geometry(),
+        osm.drop(columns = "geometry"),
         'testing', 'osm_snippet'
     )
 
     overture = load_head(OVERTURE_PATH)
     print(f"Columns: {list(overture.columns)}\n")
     config.write(
-        overture.drop_geometry(),
+        overture.drop(columns = "geometry"),
         'testing', 'overture_snippet'
     )
     foursquare = load_head(FOURSQUARE_PATH)
     print(f"Columns: {list(foursquare.columns)}\n")
     config.write(
-        foursquare.drop_geometry(),
+        foursquare.drop(columns = "geometry"),
         'testing', 'foursquare_snippet'
     )
