@@ -4,7 +4,7 @@
 #   -------------------------------------------------------------
 
 """
-Unit tests for openpois.foursquare.download.
+Unit tests for openpois.io.foursquare.
 
 All external calls (pyiceberg RestCatalog, catalog.load_table, scan) are
 mocked so tests run without network access or real credentials.
@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from openpois.foursquare.download import (
+from openpois.io.foursquare import (
     get_fsq_catalog,
     get_latest_fsq_release_date,
     load_fsq_us_places,
@@ -107,7 +107,7 @@ class TestGetFsqCatalog:
         ):
             # Re-import to pick up the patched module path in the function
             import importlib
-            import openpois.foursquare.download as fsq_mod
+            import openpois.io.foursquare as fsq_mod
             importlib.reload(fsq_mod)
 
             fsq_mod.get_fsq_catalog(
@@ -133,7 +133,7 @@ class TestGetFsqCatalog:
             "sys.modules", {"pyiceberg.catalog.rest": mock_pyiceberg_module}
         ):
             import importlib
-            import openpois.foursquare.download as fsq_mod
+            import openpois.io.foursquare as fsq_mod
             importlib.reload(fsq_mod)
 
             fsq_mod.get_fsq_catalog(

@@ -13,8 +13,6 @@ actual on-disk side-effects remain predictable.
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
-from unittest.mock import patch
 
 import geopandas as gpd
 import pygeohash
@@ -102,7 +100,9 @@ class TestAddGeohashColumns:
         """Points in different geohash cells must receive different prefix values."""
         # Seattle and New York — guaranteed different 2-char geohash prefix
         result = add_geohash_columns(
-            _point_gdf((-122.3, 47.6), (-74.0, 40.7)), precision_partition=2, precision_sort=6
+            _point_gdf((-122.3, 47.6), (-74.0, 40.7)),
+            precision_partition = 2,
+            precision_sort = 6,
         )
         prefixes = result["geohash_prefix"].tolist()
         assert prefixes[0] != prefixes[1]
@@ -143,7 +143,9 @@ class TestAddGeohashColumns:
             if issubclass(w.category, UserWarning)
             and "geographic CRS" in str(w.message)
         ]
-        assert crs_warnings == [], "geographic CRS warning leaked out of add_geohash_columns"
+        assert crs_warnings == [], (
+            "geographic CRS warning leaked out of add_geohash_columns"
+        )
 
     def test_empty_geodataframe_returns_empty_with_columns(self):
         """An empty GeoDataFrame should gain both columns with no rows."""

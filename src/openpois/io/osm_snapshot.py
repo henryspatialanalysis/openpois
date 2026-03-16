@@ -19,7 +19,7 @@ Data source: https://download.geofabrik.de/north-america/us-latest.osm.pbf
 (~11 GB, updated daily). The osmium-tool CLI must be installed and on PATH
 (conda install -c conda-forge osmium-tool).
 
-Note: This module is separate from openpois.osm.download, which fetches
+Note: This module is separate from openpois.io.osm_history, which fetches
 historical OSM element version data for change-rate modeling. This module
 downloads a current snapshot only.
 """
@@ -38,7 +38,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 
-from openpois.osm._poi_handler import POIRecordBuilder
+from openpois.io._osm_poi_handler import POIRecordBuilder
 
 
 # -----------------------------------------------------------------------------
@@ -110,7 +110,8 @@ def filter_pbf(
     overwrite: bool = False,
 ) -> Path:
     """
-    Runs osmium tags-filter to extract nodes, ways, and relations matching the given keys.
+    Runs osmium tags-filter to extract nodes, ways, and relations matching the
+    given keys.
 
     Constructs and runs a command of the form:
         osmium tags-filter -o {output_pbf} {input_pbf} nwr/{key1} nwr/{key2} ...
@@ -237,7 +238,9 @@ def parse_pbf_to_geodataframe(
     base_dir = Path(chunk_dir) if chunk_dir is not None else Path(pbf_path).parent
     work_dir = base_dir / "parse_chunks"
 
-    existing_chunks = sorted(work_dir.glob("chunk_*.parquet")) if work_dir.exists() else []
+    existing_chunks = (
+        sorted(work_dir.glob("chunk_*.parquet")) if work_dir.exists() else []
+    )
     if existing_chunks:
         if verbose:
             print(
@@ -355,10 +358,12 @@ def download_osm_snapshot(
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
     """
-    End-to-end orchestrator: download PBF, filter to POIs, parse, save GeoParquet.
+    End-to-end orchestrator: download PBF, filter to POIs, parse, save
+    GeoParquet.
 
     Steps:
-    1. download_pbf  — streams the Geofabrik US extract (~11 GB) to raw_pbf_path.
+    1. download_pbf  — streams the Geofabrik US extract (~11 GB) to
+       raw_pbf_path.
     2. filter_pbf    — runs osmium tags-filter to produce a small POI-only PBF.
     3. parse_pbf_to_geodataframe — parses with pyosmium into a GeoDataFrame.
     4. Saves as GeoParquet at output_path.
@@ -373,8 +378,8 @@ def download_osm_snapshot(
         output_path: Path to write the output GeoParquet file.
         filter_keys: OSM tag keys used to filter elements in the PBF. Elements
             lacking all of these keys are excluded.
-        extract_keys: OSM tag keys to include as output columns. If None, all tags on
-            accepted elements are extracted.
+        extract_keys: OSM tag keys to include as output columns. If None, all
+            tags on accepted elements are extracted.
         overwrite_download: Re-download even if raw_pbf_path exists.
         overwrite_filter: Re-filter even if filtered_pbf_path exists.
         source_label: Value for the output 'source' column.

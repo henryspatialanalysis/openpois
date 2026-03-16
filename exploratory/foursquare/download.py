@@ -15,7 +15,7 @@ Authentication:
         python exploratory/foursquare/download.py
 """
 from config_versioned import Config
-from openpois.foursquare.download import download_foursquare_snapshot
+from openpois.io.foursquare import download_foursquare_snapshot
 
 # -----------------------------------------------------------------------------
 # Configuration constants

@@ -13,7 +13,8 @@ It is broken into the following functions:
 - process_version: Extracts metadata and tags from a single element version.
 - compare_tags: Compares two sets of tags to find changes.
 - process_element: Processes an element's full history into versions and changes.
-- download_element_histories: Downloads and parses histories for a table of elements.
+- download_element_histories: Downloads and parses histories for a table of
+    elements.
 
 """
 from __future__ import annotations
@@ -57,7 +58,9 @@ def build_query_string(
     """
 
     def add_group(key: str) -> str:
-        prefix = f"nwr({bbox['ymin']}, {bbox['xmin']}, {bbox['ymax']}, {bbox['xmax']})"
+        prefix = (
+            f"nwr({bbox['ymin']}, {bbox['xmin']}, {bbox['ymax']}, {bbox['xmax']})"
+        )
         return f"{prefix}[{key}];\n"
 
     for key in keys:
@@ -187,8 +190,8 @@ def process_version(
     Extracts metadata and tags from a single element version.
 
     Args:
-        version_etree: An ElementTree element representing one version of an OSM
-            element.
+        version_etree: An ElementTree element representing one version of an
+            OSM element.
 
     Returns:
         A tuple containing:

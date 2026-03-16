@@ -4,7 +4,7 @@
 #   -------------------------------------------------------------
 
 """
-Unit tests for openpois.osm._poi_handler.POIRecordBuilder.
+Unit tests for openpois.io._osm_poi_handler.POIRecordBuilder.
 
 pyosmium objects are replaced by lightweight plain-Python stubs (no osmium
 import required for most tests).  The only real osmium dependency is
@@ -17,7 +17,7 @@ import osmium
 import pytest
 from shapely.geometry import MultiPolygon, Point, Polygon
 
-from openpois.osm._poi_handler import POIRecordBuilder
+from openpois.io._osm_poi_handler import POIRecordBuilder
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +60,7 @@ class _Node:
         self.id = osm_id
         self.location = _Location(lon, lat)
         self.tags = _TagList(tag_dict)
+        self.timestamp = None
 
 
 class _WayNode:
@@ -78,6 +79,7 @@ class _Way:
         self.id = osm_id
         self.nodes = [_WayNode(lon, lat) for lon, lat in coords]
         self.tags = _TagList(tag_dict)
+        self.timestamp = None
 
 
 class _Ring:
@@ -113,6 +115,7 @@ class _Area:
         self._outer = outer
         self._inners = inners or {}
         self._is_from_way = is_from_way
+        self.timestamp = None
 
     def from_way(self) -> bool:
         return self._is_from_way

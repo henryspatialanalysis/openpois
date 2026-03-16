@@ -4,7 +4,7 @@
 #   -------------------------------------------------------------
 
 """
-Unit tests for openpois.osm.snapshot.
+Unit tests for openpois.io.osm_snapshot.
 
 All external I/O (requests.get, subprocess.run, osmium.FileProcessor)
 is mocked so tests run in milliseconds without network or filesystem access.
@@ -17,8 +17,8 @@ import osmium
 import pytest
 from shapely.geometry import Point, Polygon
 
-from openpois.osm._poi_handler import POIRecordBuilder
-from openpois.osm.snapshot import (
+from openpois.io._osm_poi_handler import POIRecordBuilder
+from openpois.io.osm_snapshot import (
     download_pbf,
     filter_pbf,
     parse_pbf_to_geodataframe,
@@ -45,6 +45,7 @@ def _make_node(osm_id: int, lon: float, lat: float, tag_dict: dict) -> MagicMock
     node.location.lon = lon
     node.location.lat = lat
     node.tags = _make_tags(tag_dict)
+    node.timestamp = None
     node.is_node = MagicMock(return_value=True)
     node.is_way = MagicMock(return_value=False)
     node.is_area = MagicMock(return_value=False)
@@ -91,7 +92,7 @@ class TestDownloadPbf:
         output = tmp_path / "out.pbf"
         output.write_bytes(b"fake")
 
-        with patch("openpois.osm.snapshot.requests.get") as mock_get:
+        with patch("openpois.io.osm_snapshot.requests.get") as mock_get:
             result = download_pbf("http://example.com/file.pbf", output, overwrite=False)
 
         mock_get.assert_not_called()
@@ -108,7 +109,7 @@ class TestDownloadPbf:
         mock_resp.iter_content = MagicMock(return_value=[b"hellworld!"])
 
         with patch(
-            "openpois.osm.snapshot.requests.get", return_value=mock_resp
+            "openpois.io.osm_snapshot.requests.get", return_value=mock_resp
         ) as mock_get:
             result = download_pbf(
                 "http://example.com/file.pbf", output, overwrite=False
@@ -132,7 +133,7 @@ class TestDownloadPbf:
         mock_resp.iter_content = MagicMock(return_value=[b"new"])
 
         with patch(
-            "openpois.osm.snapshot.requests.get", return_value=mock_resp
+            "openpois.io.osm_snapshot.requests.get", return_value=mock_resp
         ) as mock_get:
             download_pbf("http://example.com/file.pbf", output, overwrite=True)
 
@@ -152,7 +153,7 @@ class TestFilterPbf:
         input_pbf.write_bytes(b"fake")
         output_pbf.write_bytes(b"fake")
 
-        with patch("openpois.osm.snapshot.subprocess.run") as mock_run:
+        with patch("openpois.io.osm_snapshot.subprocess.run") as mock_run:
             result = filter_pbf(input_pbf, output_pbf, ["amenity"], overwrite=False)
 
         mock_run.assert_not_called()
@@ -165,8 +166,13 @@ class TestFilterPbf:
         input_pbf.write_bytes(b"fake")
         osm_keys = ["amenity", "shop", "tourism"]
 
-        with patch("openpois.osm.snapshot.subprocess.run") as mock_run, \
-             patch("openpois.osm.snapshot.shutil.which", return_value="/usr/bin/osmium"):
+        with (
+            patch("openpois.io.osm_snapshot.subprocess.run") as mock_run,
+            patch(
+                "openpois.io.osm_snapshot.shutil.which",
+                return_value = "/usr/bin/osmium",
+            ),
+        ):
             filter_pbf(input_pbf, output_pbf, osm_keys, overwrite=False)
 
         mock_run.assert_called_once()
@@ -184,8 +190,13 @@ class TestFilterPbf:
         input_pbf.write_bytes(b"fake")
         output_pbf.write_bytes(b"existing")
 
-        with patch("openpois.osm.snapshot.subprocess.run") as mock_run, \
-             patch("openpois.osm.snapshot.shutil.which", return_value="/usr/bin/osmium"):
+        with (
+            patch("openpois.io.osm_snapshot.subprocess.run") as mock_run,
+            patch(
+                "openpois.io.osm_snapshot.shutil.which",
+                return_value = "/usr/bin/osmium",
+            ),
+        ):
             filter_pbf(input_pbf, output_pbf, ["amenity"], overwrite=True)
 
         mock_run.assert_called_once()
@@ -304,7 +315,7 @@ class TestParsePbfToGeoDataFrame:
         extract_keys = ["amenity", "shop"]
 
         with patch(
-            "openpois.osm.snapshot.osmium.FileProcessor",
+            "openpois.io.osm_snapshot.osmium.FileProcessor",
             return_value=_make_file_processor([]),
         ):
             gdf = parse_pbf_to_geodataframe(
@@ -332,7 +343,7 @@ class TestParsePbfToGeoDataFrame:
         )
 
         with patch(
-            "openpois.osm.snapshot.osmium.FileProcessor",
+            "openpois.io.osm_snapshot.osmium.FileProcessor",
             return_value=_make_file_processor([fake_node]),
         ):
             gdf = parse_pbf_to_geodataframe(

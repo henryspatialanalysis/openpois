@@ -8,7 +8,7 @@ This script uses the openpois.osm_data module to:
 """
 import datetime
 from config_versioned import Config
-from openpois.osm.download import (
+from openpois.io.osm_history import (
     build_date_range,
     collect_element_ids,
     download_element_histories,

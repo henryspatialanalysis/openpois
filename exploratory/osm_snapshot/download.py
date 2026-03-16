@@ -9,7 +9,7 @@ This script uses openpois.osm.snapshot to:
 Requires osmium-tool on PATH (conda install -c conda-forge osmium-tool).
 """
 from config_versioned import Config
-from openpois.osm.snapshot import download_osm_snapshot
+from openpois.io.osm_snapshot import download_osm_snapshot
 
 # -----------------------------------------------------------------------------
 # Configuration constants

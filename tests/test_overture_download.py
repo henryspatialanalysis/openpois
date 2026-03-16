@@ -4,7 +4,7 @@
 #   -------------------------------------------------------------
 
 """
-Unit tests for openpois.overture.download.
+Unit tests for openpois.io.overture.
 
 All external calls (requests.get for S3 listing, duckdb queries) are mocked
 so tests run without network access.
@@ -18,7 +18,7 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 
-from openpois.overture.download import (
+from openpois.io.overture import (
     build_overture_s3_path,
     download_overture_snapshot,
     get_latest_release_date,
@@ -66,7 +66,7 @@ class TestGetLatestReleaseDate:
         mock_resp = _mock_requests_response(_S3_XML_TWO_RELEASES)
 
         with patch(
-            "openpois.overture.download.requests.get", return_value=mock_resp
+            "openpois.io.overture.requests.get", return_value=mock_resp
         ):
             result = get_latest_release_date("overturemaps-us-west-2")
 
@@ -77,7 +77,7 @@ class TestGetLatestReleaseDate:
         mock_resp = _mock_requests_response(_S3_XML_EMPTY)
 
         with patch(
-            "openpois.overture.download.requests.get", return_value=mock_resp
+            "openpois.io.overture.requests.get", return_value=mock_resp
         ):
             with pytest.raises(ValueError, match="No release prefixes found"):
                 get_latest_release_date("overturemaps-us-west-2")
@@ -92,7 +92,7 @@ class TestGetLatestReleaseDate:
         )
 
         with patch(
-            "openpois.overture.download.requests.get", return_value=mock_resp
+            "openpois.io.overture.requests.get", return_value=mock_resp
         ):
             with pytest.raises(_req.HTTPError):
                 get_latest_release_date("overturemaps-us-west-2")
@@ -102,7 +102,7 @@ class TestGetLatestReleaseDate:
         mock_resp = _mock_requests_response(_S3_XML_TWO_RELEASES)
 
         with patch(
-            "openpois.overture.download.requests.get", return_value=mock_resp
+            "openpois.io.overture.requests.get", return_value=mock_resp
         ) as mock_get:
             get_latest_release_date("my-bucket")
 
@@ -174,7 +174,7 @@ class TestDownloadOvertureSnapshot:
         )
         mock_conn = self._make_mock_conn(df)
 
-        with patch("openpois.overture.download.duckdb.connect", return_value=mock_conn), \
+        with patch("openpois.io.overture.duckdb.connect", return_value=mock_conn), \
              patch.object(
                  gpd.GeoDataFrame, "to_parquet", return_value=None
              ):
@@ -221,11 +221,11 @@ class TestDownloadOvertureSnapshot:
 
         with (
             patch(
-                "openpois.overture.download.duckdb.connect",
+                "openpois.io.overture.duckdb.connect",
                 return_value=mock_conn,
             ),
             patch(
-                "openpois.overture.download.get_latest_release_date",
+                "openpois.io.overture.get_latest_release_date",
                 return_value="2026-02-18.0",
             ) as mock_latest,
             patch.object(gpd.GeoDataFrame, "to_parquet", return_value=None),

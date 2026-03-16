@@ -13,7 +13,7 @@ Smoke test: temporarily narrow the bbox in config.yaml to the Seattle area
 the full CONUS download.
 """
 from config_versioned import Config
-from openpois.overture.download import download_overture_snapshot
+from openpois.io.overture import download_overture_snapshot
 
 # -----------------------------------------------------------------------------
 # Configuration constants
