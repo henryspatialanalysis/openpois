@@ -188,6 +188,7 @@ dependencies:
       - astroid==4.0.4
       - autopep8==2.3.2
       - beautifulsoup4==4.14.3
+      - boto3==1.42.68
       - build==1.4.0
       - cachetools==6.2.6
       - cffi==2.0.0
@@ -235,6 +236,7 @@ dependencies:
       - pydantic==2.12.5
       - pydantic-core==2.41.5
       - pyflakes==3.4.0
+      - pygeohash==3.2.2
       - pyiceberg==0.11.1
       - pylint==4.0.5
       - pyproject-hooks==1.2.0

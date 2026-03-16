@@ -1,10 +1,11 @@
 # Versioned directories (used with config.get_dir_path())
 versions:
   osm_data: "20260313"
-  model_output: "20260313_by_healthcare"
+  model_output: "20260315_constant"
   snapshot_osm: "20260313"
   snapshot_overture: "20260313"
   snapshot_foursquare: "20260313"
+  aws: "20260313"
 
 # Settings for downloading data
 download:
@@ -134,5 +135,8 @@ directories:
 
 # Settings for uploading snapshots to S3
 upload:
+  s3_region: "us-west-2"
+  s3_bucket: "openpois-public"
+  s3_prefix: "snapshots/osm"
   geohash_precision_partition: 4  # ~39 km x 20 km cells; ~1,000–3,000 cells over CONUS
   geohash_precision_sort: 6       # ~0.6 km x 1.2 km; fine-grained sort within each partition
