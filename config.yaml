@@ -27,7 +27,7 @@ download:
     chunk_size: 100_000
     max_area_nodes: 1_000
     verbose: true
-    filter_keys: ['amenity', 'shop', 'healthcare', 'leisure']
+    filter_keys: ['shop', 'healthcare', 'leisure', 'amenity']
     extract_keys: [
       'addr:city','addr:country','addr:housename','addr:housenumber','addr:postcode',
       'addr:state','addr:street','addr:unit','amenity','atm','bar','bicycle',
@@ -73,13 +73,15 @@ osm_data:
     - obs_timestamp
     - last_obs_timestamp
     - last_tag_timestamp
+  apply_model:
+    model_stub: '20260315'
 
 # Settings for exploratory/models/pytorch_simple.py
 osm_turnover_model:
-  model_type: random_by_type
+  model_type: constant
   tag_key: name
   var_prior: [-1.0, 5.0]
-  group_key: healthcare_last_value
+  group_key: null
   group_values: null
   min_value_count: 5
   n_draws: 250
@@ -115,6 +117,7 @@ directories:
       raw_pbf: us-latest.osm.pbf
       filtered_pbf: us-pois.osm.pbf
       snapshot: osm_snapshot.parquet
+      rated_snapshot: osm_snapshot_rated.parquet
   snapshot_overture:
     versioned: true
     path: ~/data/openpois/snapshots/overture
