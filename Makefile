@@ -23,6 +23,14 @@ lint:
 	@$(CONDA_BIN)flake8 src/ exploratory/ tests/
 	@$(CONDA_BIN)pylint src/openpois/
 
+# Build the site for production
+site_build:
+	@cd site && npm run build;
+
+# Serve the site locally with hot reload
+site_dev:
+	@cd site && npm run dev;
+
 # Convenience target to print all of the available targets in this file
 # From https://stackoverflow.com/questions/4219255
 .PHONY: list
