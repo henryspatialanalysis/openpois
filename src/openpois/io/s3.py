@@ -43,3 +43,25 @@ def upload_partitioned_dataset(
         )
 
     return len(parquet_files)
+
+
+def upload_single_file(
+    local_path: Path,
+    bucket: str,
+    s3_key: str,
+    s3_region: str,
+    content_type: str = "application/octet-stream",
+) -> str:
+    """Upload a single local file to S3.
+
+    Returns the public HTTPS URL of the uploaded object.
+    """
+    s3 = boto3.client("s3", region_name = s3_region)
+    print(f"Uploading {local_path.name} to s3://{bucket}/{s3_key} ...")
+    s3.upload_file(
+        Filename = str(local_path),
+        Bucket = bucket,
+        Key = s3_key,
+        ExtraArgs = {"ContentType": content_type},
+    )
+    return f"https://{bucket}.s3.{s3_region}.amazonaws.com/{s3_key}"
