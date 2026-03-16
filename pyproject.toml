@@ -31,6 +31,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "config_versioned" = ["data/*.yaml", "data/*.csv"]
+"openpois" = ["conflation/data/*.csv"]
 
 [tool.black]
 line-length = 90

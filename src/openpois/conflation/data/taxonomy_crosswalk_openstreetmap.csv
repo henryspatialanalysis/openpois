@@ -1,0 +1,118 @@
+﻿osm_key,osm_value,shared_label
+shop,alcohol,Liquor Store
+shop,bakery,Bakery
+shop,beauty,Salon and Hair
+shop,bicycle,Bike shop
+shop,books,Bookstore
+shop,car,Car Dealer
+shop,car_parts,Car Repair
+shop,car_repair,Car Repair
+shop,chemist,Pharmacy
+shop,clothes,Clothing Store
+shop,convenience,Convenience Store
+shop,department_store,Clothing Store
+shop,doityourself,Specialty Store
+shop,dry_cleaning,Dry Cleaning
+shop,florist,Florist
+shop,furniture,Furniture Store
+shop,garden_centre,Garden Store
+shop,gift,Specialty Store
+shop,hairdresser,Salon and Hair
+shop,hardware,Hardware
+shop,jewelry,Jewelry Store
+shop,laundry,Laundromat
+shop,mall,Shopping Center
+shop,massage,Massage Therapy
+shop,mobile_phone,Cell Phone Store
+shop,optician,Eye Care
+shop,pet,Pet Store
+shop,second_hand,Thrift Store
+shop,shoes,Shoe Store
+shop,sports,Sports Outlet
+shop,storage_rental,Specialty Store
+shop,supermarket,Supermarket
+shop,tobacco,Specialty Store
+shop,tires,Tire Store
+shop,tyres,Tire Store
+shop,variety_store,Discount Store
+shop,wholesale,Wholesale Store
+healthcare,alternative,Alternative Medicine
+healthcare,blood_donation,Other Healthcare
+healthcare,chiropractor,Other Healthcare
+healthcare,clinic,Clinic
+healthcare,counselling,Counseling
+healthcare,dentist,Dentist
+healthcare,dialysis,Other Healthcare
+healthcare,doctor,Clinic
+healthcare,hospice,Other Healthcare
+healthcare,hospital,Clinic
+healthcare,laboratory,Other Healthcare
+healthcare,midwife,Maternity Center
+healthcare,occupational_therapist,Occupational Therapy
+healthcare,optometrist,Eye Care
+healthcare,pharmacy,Pharmacy
+healthcare,physiotherapist,Physical Therapy
+healthcare,psychotherapist,Mental Health
+healthcare,rehabilitation,Physical Therapy
+healthcare,speech_therapist,Speech Therapist
+amenity,arts_centre,Arts Venue
+amenity,bank,Bank
+amenity,bar,Bar
+amenity,biergarten,Bar
+amenity,cafe,Cafe
+amenity,car_rental,Car Rental
+amenity,car_wash,Car Wash
+amenity,casino,Casino
+amenity,charging_station,Charging Station
+amenity,cinema,Movie Theater
+amenity,clinic,Clinic
+amenity,college,University
+amenity,community_centre,Community Center
+amenity,dentist,Dentist
+amenity,doctors,Clinic
+amenity,fast_food,Fast Food
+amenity,food_court,Restaurant
+amenity,fuel,Gas Station
+amenity,hospital,Clinic
+amenity,ice_cream,Dessert Shop
+amenity,kindergarten,Kindergarten
+amenity,library,Library
+amenity,marketplace,Other Shop
+amenity,museum,Museum
+amenity,nightclub,Nightclub
+amenity,pharmacy,Pharmacy
+amenity,post_office,Post Office
+amenity,pub,Bar
+amenity,restaurant,Restaurant
+amenity,school,School
+amenity,social_centre,Social Club
+amenity,theatre,Performing Arts
+amenity,university,University
+amenity,veterinary,Veterinarian
+leisure,amusement_arcade,Arcade
+leisure,bowling_alley,Bowling Alley
+leisure,dance,Performing Arts
+leisure,disc_golf_course,Recreation
+leisure,dog_park,Dog Park
+leisure,escape_game,Recreation
+leisure,fitness_centre,Fitness Center
+leisure,garden,Park
+leisure,golf_course,Golf Course
+leisure,horse_riding,Recreation
+leisure,ice_rink,Recreation
+leisure,marina,Marina
+leisure,miniature_golf,Recreation
+leisure,nature_reserve,Park
+leisure,park,Park
+leisure,pitch,Recreation
+leisure,playground,Playground
+leisure,sports_centre,Recreation
+leisure,stadium,Stadium
+leisure,swimming_pool,Swimming Pool
+leisure,track,Recreation
+leisure,trampoline_park,Recreation
+leisure,water_park,Recreation
+amenity,*,Other Amenity
+healthcare,*,Other Healthcare
+shop,*,Other Shop
+leisure,*,Recreation

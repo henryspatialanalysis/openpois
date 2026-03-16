@@ -6,6 +6,7 @@ versions:
   snapshot_overture: "20260313"
   snapshot_foursquare: "20260313"
   aws: "20260313"
+  conflation: "20260316"
 
 # Settings for downloading data
 download:
@@ -111,6 +112,7 @@ directories:
     path: ~/data/openpois/snapshots/foursquare
     files:
       snapshot: foursquare_snapshot.parquet
+      partitioned: foursquare_snapshot_partitioned
   snapshot_osm:
     versioned: true
     path: ~/data/openpois/snapshots/osm
@@ -120,11 +122,20 @@ directories:
       snapshot: osm_snapshot.parquet
       rated_snapshot: osm_snapshot_rated.parquet
       partitioned: osm_snapshot_partitioned
+      pmtiles: osm_snapshot.pmtiles
   snapshot_overture:
     versioned: true
     path: ~/data/openpois/snapshots/overture
     files:
       snapshot: overture_snapshot.parquet
+  conflation:
+    versioned: true
+    path: ~/data/openpois/conflation
+    files:
+      conflated: conflated.parquet
+      match_diagnostics: match_diagnostics.parquet
+      partitioned: conflated_partitioned
+      summary_by_label: summary_by_label.csv
   testing:
     versioned: false
     path: ~/data/openpois/testing
@@ -132,6 +143,23 @@ directories:
       osm_snippet: osm_snippet.csv
       overture_snippet: overture_snippet.csv
       foursquare_snippet: foursquare_snippet.csv
+
+# Settings for POI conflation
+conflation:
+  overture_confidence_weight: 0.7
+  min_match_score: 0.50
+  max_radius_m: 200
+  default_radius_m: 100
+  distance_weight: 0.0
+  name_weight: 0.50
+  type_weight: 0.30
+  identifier_weight: 0.20
+  chunk_size: 500_000
+  test_bbox:
+    xmin: -122.45
+    ymin: 47.50
+    xmax: -122.25
+    ymax: 47.70
 
 # Settings for uploading snapshots to S3
 upload:
@@ -141,3 +169,6 @@ upload:
   full_url: "https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/osm/20260313/osm_snapshot_partitioned/"
   geohash_precision_partition: 4  # ~39 km x 20 km cells; ~1,000–3,000 cells over CONUS
   geohash_precision_sort: 6       # ~0.6 km x 1.2 km; fine-grained sort within each partition
+  pmtiles:
+    min_zoom: 14
+    max_zoom: 16
