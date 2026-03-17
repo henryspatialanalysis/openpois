@@ -22,7 +22,7 @@ async function _init() {
     const wasmUrl = `${baseUrl}duckdb-eh.wasm`
 
     const worker = new Worker(workerUrl)
-    const logger = new duckdb.ConsoleLogger()
+    const logger = new duckdb.VoidLogger()
     const instance = new duckdb.AsyncDuckDB(logger, worker)
     await instance.instantiate(wasmUrl)
 

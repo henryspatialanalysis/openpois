@@ -175,10 +175,22 @@ body,
 
 .confidence-legend .legend-ticks {
   display: flex;
-  justify-content: space-between;
   font-size: 10px;
   color: #777;
   margin-top: 2px;
+}
+
+.confidence-legend .legend-ticks span {
+  flex: 1;
+  text-align: center;
+}
+
+.confidence-legend .legend-ticks span:first-child {
+  text-align: left;
+}
+
+.confidence-legend .legend-ticks span:last-child {
+  text-align: right;
 }
 
 /* Geolocation button */
@@ -413,6 +425,29 @@ body,
     transform: rotate(360deg);
   }
 }
+
+/* Geocode marker (X) */
+.geocode-marker {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  pointer-events: none;
+}
+
+.geocode-marker::before,
+.geocode-marker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 2.5px;
+  height: 100%;
+  background: #444;
+  margin-left: -1.25px;
+}
+
+.geocode-marker::before { transform: rotate(45deg); }
+.geocode-marker::after { transform: rotate(-45deg); }
 
 /* Geolocation dot */
 .geolocation-dot {

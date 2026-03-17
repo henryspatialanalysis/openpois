@@ -2,7 +2,7 @@
   <div class="map-container">
     <div ref="mapEl" style="width: 100%; height: 100%"></div>
 
-    <div v-if="loading" class="loading-indicator">
+    <div v-show="loading" class="loading-indicator">
       <div class="spinner"></div>
       Loading POIs...
     </div>
@@ -103,6 +103,7 @@ const { locate } = useGeolocation()
 const debouncer = createQueryDebouncer(300)
 
 let geoOverlay = null
+let geocodeMarker = null
 
 // Helper: get all data layers
 function getDataLayers() {
@@ -381,6 +382,21 @@ function flyToBbox(bbox) {
     maxZoom: 17,
     padding: [50, 50, 50, 50],
   })
+
+  if (bbox.lng != null && bbox.lat != null) {
+    const coord = fromLonLat([bbox.lng, bbox.lat])
+    if (!geocodeMarker) {
+      const el = document.createElement('div')
+      el.className = 'geocode-marker'
+      geocodeMarker = new Overlay({
+        element: el,
+        positioning: 'center-center',
+        stopEvent: false,
+      })
+      map.value.addOverlay(geocodeMarker)
+    }
+    geocodeMarker.setPosition(coord)
+  }
 }
 
 defineExpose({ flyToBbox })

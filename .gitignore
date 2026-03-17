@@ -120,6 +120,7 @@ venv.bak/
 # Site build output
 site/dist
 site/node_modules
+site/.env
 
 # mypy
 .mypy_cache/

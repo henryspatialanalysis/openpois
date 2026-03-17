@@ -163,9 +163,9 @@ export const MAX_GEOHASH_CELLS = 50
 export const MIN_ZOOM_FOR_DATA = 14
 export const CLUSTER_MAX_ZOOM = 12
 
-// Nominatim
-export const NOMINATIM_URL =
-  'https://nominatim.openstreetmap.org/search'
+// Stadia Maps Geocoding
+export const STADIA_GEOCODING_URL =
+  'https://api.stadiamaps.com/geocoding/v1/search'
 
 // Initial map view — New York City (fallback if geolocation is denied)
 export const INITIAL_CENTER = [-74.006, 40.7128]

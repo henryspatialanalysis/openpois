@@ -10,10 +10,10 @@
     <ul v-if="results.length" class="search-results">
       <li
         v-for="r in results"
-        :key="r.place_id"
+        :key="r.properties.id"
         @click="selectResult(r)"
       >
-        {{ r.display_name }}
+        {{ r.properties.label }}
       </li>
     </ul>
   </div>
@@ -32,10 +32,21 @@ function onInput() {
 }
 
 function selectResult(r) {
-  // Nominatim returns boundingbox as [south, north, west, east]
-  const [south, north, west, east] = r.boundingbox.map(Number)
-  emit('fly-to', { south, north, west, east })
-  query.value = r.display_name
+  // Stadia/Pelias GeoJSON bbox: [west, south, east, north]
+  // Fall back to a small box around the point if bbox is absent.
+  const [lng, lat] = r.geometry.coordinates
+  let west, south, east, north
+  if (r.bbox) {
+    ;[west, south, east, north] = r.bbox
+  } else {
+    const delta = 0.01
+    west = lng - delta
+    east = lng + delta
+    south = lat - delta
+    north = lat + delta
+  }
+  emit('fly-to', { west, south, east, north, lng, lat })
+  query.value = r.properties.label
   clearResults()
 }
 

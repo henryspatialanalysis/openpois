@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { NOMINATIM_URL } from '../constants.js'
+import { STADIA_GEOCODING_URL } from '../constants.js'
 
 const results = ref([])
 const loading = ref(false)
@@ -17,20 +17,14 @@ async function search(query) {
       loading.value = true
       try {
         const params = new URLSearchParams({
-          format: 'json',
-          q: query,
-          countrycodes: 'us',
-          limit: '5',
+          api_key: import.meta.env.VITE_STADIA_API_KEY,
+          text: query,
+          'boundary.country': 'US',
+          size: '5',
         })
-        const resp = await fetch(
-          `${NOMINATIM_URL}?${params}`,
-          {
-            headers: {
-              'User-Agent': 'openpois-viewer/1.0',
-            },
-          }
-        )
-        results.value = await resp.json()
+        const resp = await fetch(`${STADIA_GEOCODING_URL}?${params}`)
+        const data = await resp.json()
+        results.value = data.features ?? []
       } catch (err) {
         console.error('Geocoding error:', err)
         results.value = []
@@ -38,7 +32,7 @@ async function search(query) {
         loading.value = false
         resolve()
       }
-    }, 1000) // 1s debounce for Nominatim rate limit
+    }, 300)
   })
 }
 
