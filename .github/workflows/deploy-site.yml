@@ -37,12 +37,6 @@ jobs:
           cp node_modules/@duckdb/duckdb-wasm/dist/duckdb-eh.wasm public/
         working-directory: site
 
-      - name: Build
-        run: npm run build
-        working-directory: site
-        env:
-          VITE_STADIA_API_KEY: ${{ secrets.VITE_STADIA_API_KEY }}
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -52,6 +46,12 @@ jobs:
 
       - name: Build taxonomy page
         run: python scripts/build_taxonomy.py
+
+      - name: Build
+        run: npm run build
+        working-directory: site
+        env:
+          VITE_STADIA_API_KEY: ${{ secrets.VITE_STADIA_API_KEY }}
 
       - name: Build Sphinx docs
         run: make html
