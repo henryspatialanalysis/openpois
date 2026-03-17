@@ -61,6 +61,9 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 
+# Wrap function signatures so each argument appears on its own line
+python_maximum_signature_line_length = 1
+
 # -- Options for HTML output ---------------------------------------------------
 
 html_theme = "sphinx_rtd_theme"
