@@ -5,6 +5,14 @@
       @update:source="setSource"
     />
     <SearchBar @fly-to="handleFlyTo" />
+    <a
+      href="https://henryspatialanalysis.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="brand-logo-link"
+    >
+      <img src="./assets/logo.png" alt="Henry Spatial Analysis" class="brand-logo" />
+    </a>
   </div>
   <MapContainer
     ref="mapRef"

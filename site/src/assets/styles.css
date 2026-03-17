@@ -33,6 +33,20 @@ body,
   flex-wrap: wrap;
 }
 
+/* Brand logo */
+.brand-logo-link {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
 /* Source toggle */
 .source-toggle {
   display: flex;
