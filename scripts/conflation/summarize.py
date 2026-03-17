@@ -2,11 +2,20 @@
 """
 Summarize the conflated dataset by shared_label and source.
 
-Produces a CSV with one row per shared_label showing counts by
-source (matched, osm, overture) and average match score.
+Reads conflated.parquet and produces a CSV with one row per shared_label
+showing POI counts broken down by source (matched, osm, overture) and the
+average composite match score for matched pairs.
 
-Usage:
-    python exploratory/conflation/summarize.py
+Config keys used (config.yaml):
+    conflation.conflated        — input GeoParquet path (conflated.parquet)
+    conflation.summary_by_label — output CSV path
+
+Prerequisites:
+    Run scripts/conflation/conflate.py first.
+
+Output file:
+    summary_by_label.csv — columns: shared_label, matched, osm, overture,
+        total, avg_match_score; sorted by total descending
 """
 from __future__ import annotations
 
@@ -53,6 +62,6 @@ if __name__ == "__main__":
     )
     summary.index.name = "shared_label"
 
-    summary.to_csv(OUTPUT_PATH)
-    print(f"\nSaved to {OUTPUT_PATH}")
+    summary.to_csv(output_path)
+    print(f"\nSaved to {output_path}")
     print(f"\n{summary.to_string()}")

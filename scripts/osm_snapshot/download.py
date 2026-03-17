@@ -1,12 +1,32 @@
 """
-Exploratory script for downloading a current OSM POI snapshot for the US.
+Download the current US OpenStreetMap POI snapshot as a GeoParquet file.
 
-This script uses openpois.osm.snapshot to:
-1. Download the Geofabrik US PBF extract (~11 GB, skipped if already present).
-2. Filter to nodes and ways with matching tag keys using osmium tags-filter.
-3. Parse with pyosmium into a GeoDataFrame and save as GeoParquet.
+Downloads the Geofabrik North America PBF extract (~11 GB), uses osmium
+tags-filter to extract nodes and ways matching the configured tag keys, then
+parses the result with pyosmium into a GeoDataFrame and saves as GeoParquet.
+Incremental: skips the PBF download or filter step if output files already
+exist (controlled by overwrite_download and overwrite_filter config flags).
 
-Requires osmium-tool on PATH (conda install -c conda-forge osmium-tool).
+Note: osmium is resolved from the conda env bin rather than the shell PATH;
+no manual PATH modification is needed.
+
+Config keys used (config.yaml):
+    download.osm.pbf_url             — Geofabrik PBF URL (North America extract)
+    download.osm.filter_keys         — OSM tag keys to retain (e.g. amenity, shop)
+    download.osm.extract_keys        — tag keys to include as output columns
+    download.osm.overwrite_download  — re-download PBF even if it already exists
+    download.osm.overwrite_filter    — re-run osmium filter even if output exists
+    download.osm.source_label        — value written to the "source" column
+    download.osm.keep_all_keys       — retain all discovered tag columns in output
+    download.osm.chunk_size          — number of elements per pyosmium parse chunk
+    download.osm.max_area_nodes      — skip way geometries with more nodes than this
+    download.osm.verbose             — print progress during PBF parsing
+    directories.snapshot_osm         — output directory; also used for temp PBF files
+
+Output file:
+    osm_snapshot.parquet — GeoParquet with ~7.8M US POIs (nodes + area centroids)
+        Columns: osm_id, osm_type, name, geometry, last_edited, source,
+        plus all extract_keys columns
 """
 from config_versioned import Config
 from openpois.io.osm_snapshot import download_osm_snapshot

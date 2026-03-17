@@ -1,10 +1,32 @@
 """
-PyTorch model testing
+Fit an empirical Bayes PyTorch model for OSM POI tag change rates.
 
-Created February 12, 2026
-Purpose: Explore a simple empirical Bayes PyTorch model framework for change data
+Reads osm_observations_{tag_key}.csv and fits a Poisson change-rate model
+using L-BFGS optimization via PyTorch. The model estimates a per-group change
+rate λ (events per year). Predictions give the probability that a tag remains
+unchanged after t years for t = 0.0, 0.1, ..., 10.0. Supports constant and
+random-effects (by type) model specifications.
 
-Reads data prepared in `osm/format_tabular.py`
+Config keys used (config.yaml):
+    directories.osm_data                    — input data directory
+    directories.model_output                — output directory for results
+    osm_turnover_model.tag_key              — tag key to model (e.g. "amenity")
+    osm_turnover_model.group_key            — column to group by (null = constant)
+    osm_turnover_model.group_values         — subset of group values (null = all)
+    osm_turnover_model.min_value_count      — minimum observations to include a group
+    osm_turnover_model.model_type           — "constant" or "random_by_type"
+    osm_turnover_model.var_prior            — prior variance on log(λ)
+    osm_turnover_model.n_draws              — number of posterior parameter draws
+    osm_turnover_model.save_full_model      — save param_draws and serialized model
+
+Prerequisites:
+    Run osm_data/format_tabular.py first.
+
+Output files (in model_output directory):
+    fitted_params.csv   — estimated λ with uncertainty per group
+    predictions.csv     — p(unchanged) at t = 0.0..10.0 years per group
+    param_draws.csv     — posterior draws (if save_full_model = true)
+    fitted_model.pt     — serialized ModelFitter (if save_full_model = true)
 """
 
 import numpy as np

@@ -1,6 +1,21 @@
 """
-Load the first few rows from each POI snapshot (OSM, Overture, Foursquare)
-as GeoDataFrames for quick inspection.
+Load the first few rows from each POI snapshot for quick schema inspection.
+
+Reads the first N_ROWS rows from each of the three GeoParquet snapshots
+(OSM, Overture, Foursquare) without loading the full files into memory, then
+writes the rows (minus geometry) to versioned snippet CSVs for fast reference.
+Useful for verifying column names and data types after a new download.
+
+Config keys used (config.yaml):
+    snapshot_osm.snapshot          — OSM GeoParquet path
+    snapshot_overture.snapshot     — Overture GeoParquet path
+    snapshot_foursquare.snapshot   — Foursquare GeoParquet path
+    directories.testing            — output directory for snippet CSVs
+
+Output files (in testing directory):
+    osm_snippet.csv         — first N_ROWS rows of OSM snapshot (no geometry)
+    overture_snippet.csv    — first N_ROWS rows of Overture snapshot (no geometry)
+    foursquare_snippet.csv  — first N_ROWS rows of Foursquare snapshot (no geometry)
 """
 
 import pyarrow as pa

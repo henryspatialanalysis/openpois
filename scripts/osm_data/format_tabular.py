@@ -1,11 +1,24 @@
 """
-Exploratory script for reformatting OSM data into a tabular format.
+Reformat raw OSM version histories into modelling-ready observations.
 
-This script:
-1. Reads in the OSM versions and changes data from CSV files.
-2. Reconfigures POI changesets into 'observations', which are either changes to the
-   relevant POI tag or confirmation that the tag is unchanged.
-3. Saves the observations to a new CSV file.
+Reads osm_versions.csv and osm_changes.csv produced by osm_data/download.py,
+then converts them into an observation-per-version format suitable for the
+change-rate model. Each observation records the tag value, the timestamps of
+the previous tag assignment and the current observation, and a flag for whether
+the tag changed.
+
+Config keys used (config.yaml):
+    directories.osm_data     — directory containing input and output CSVs
+    download.download_keys   — all tag keys collected (passed as keep_keys)
+    osm_data.tag_key         — single tag key to model (e.g. "amenity")
+
+Prerequisites:
+    Run osm_data/download.py first to produce osm_versions.csv and osm_changes.csv.
+
+Output file (in osm_data directory):
+    osm_observations_{tag_key}.csv — one row per version observation with columns:
+        id, version, tag_key, last_tag_timestamp, obs_timestamp, changed,
+        plus all keep_keys columns for grouping
 """
 
 import pandas as pd

@@ -1,18 +1,30 @@
 """
-Exploratory script for downloading a current Foursquare OS Places snapshot.
+Download the current US Foursquare OS Places snapshot as a GeoParquet file.
 
-This script uses openpois.foursquare.download to:
-1. Authenticate to the Foursquare Places Portal Iceberg catalog.
-2. Auto-detect or use a pinned release date.
-3. Load US places filtered by L1 category and save as GeoParquet.
+Authenticates to the Foursquare Places Portal Apache Iceberg REST catalog
+using a portal token, loads the unpartitioned places_os table filtered to US
+records with no closed date, joins against categories_os to resolve L1
+category names, and saves the result as a GeoParquet file.
 
 Authentication:
-    Set the FSQ_PORTAL_TOKEN environment variable to your portal token before
-    running. Register at https://places.foursquare.com to obtain a token.
-
-    Example (bash):
+    Set the FSQ_PORTAL_TOKEN environment variable before running:
         export FSQ_PORTAL_TOKEN="<your_token>"
-        python exploratory/foursquare/download.py
+    Register at https://places.foursquare.com to obtain a token.
+
+Config keys used (config.yaml):
+    download.foursquare.release_date        — pinned release (null = auto-detect)
+    download.foursquare.catalog_uri         — REST catalog endpoint URL
+    download.foursquare.catalog_warehouse   — warehouse name ("places")
+    download.foursquare.catalog_namespace   — namespace ("datasets")
+    download.foursquare.places_table        — places table name ("places_os")
+    download.foursquare.categories_table    — categories table name ("categories_os")
+    download.foursquare.token_env_var       — env var name for the portal token
+    download.foursquare.l1_category_names   — L1 category filter list
+    directories.snapshot_foursquare         — output directory
+
+Output file:
+    foursquare_snapshot.parquet — GeoParquet with ~8.3M US POIs
+        Columns: fsq_place_id, name, fsq_category_ids, geometry, source
 """
 from config_versioned import Config
 from openpois.io.foursquare import download_foursquare_snapshot

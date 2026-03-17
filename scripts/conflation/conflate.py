@@ -1,15 +1,37 @@
 #!/home/nathenry/miniforge3/envs/openpois/bin/python
 """
-Conflate rated OSM POIs with Overture Maps POIs.
+Conflate rated OSM POIs with Overture Maps POIs into a unified dataset.
 
-Reads both snapshots, builds a taxonomy crosswalk, finds spatial
-candidates via BallTree, scores candidates on distance + name +
-type + identifiers, performs greedy one-to-one matching, and merges
-into a unified superset saved as GeoParquet.
+Reads both snapshots, assigns each POI a shared taxonomy label via CSV
+crosswalk files, finds spatial candidates within per-category radii using a
+BallTree, scores candidate pairs on distance, name similarity, type agreement,
+and shared identifiers, performs greedy one-to-one matching, and merges all
+POIs (matched and unmatched) into a single GeoParquet output.
+
+Config keys used (config.yaml):
+    snapshot_osm.rated_snapshot            — rated OSM GeoParquet input path
+    snapshot_overture.snapshot             — Overture GeoParquet input path
+    conflation.conflated                   — output GeoParquet path
+    download.osm.filter_keys               — tag keys used for taxonomy assignment
+    conflation.overture_confidence_weight  — weight on Overture confidence in scoring
+    conflation.min_match_score             — minimum composite score to accept a match
+    conflation.max_radius_m                — maximum candidate search radius in meters
+    conflation.default_radius_m            — fallback radius for unclassified POIs
+    conflation.distance_weight             — scoring weight for spatial distance
+    conflation.name_weight                 — scoring weight for name similarity
+    conflation.type_weight                 — scoring weight for taxonomy agreement
+    conflation.identifier_weight           — scoring weight for shared identifiers
+    conflation.chunk_size                  — BallTree chunk size for memory management
+    conflation.test_bbox                   — small bbox used with --test flag
 
 Usage:
-    python exploratory/conflation/conflate.py          # full run
-    python exploratory/conflation/conflate.py --test   # small bbox
+    python scripts/conflation/conflate.py           # full CONUS run
+    python scripts/conflation/conflate.py --test    # Seattle test bbox
+
+Output file:
+    conflated.parquet — GeoParquet with all OSM + Overture POIs, columns:
+        shared_label, source (matched/osm/overture), match_score,
+        osm_id, overture_id, name, conf_mean/lower/upper, geometry, ...
 """
 from __future__ import annotations
 

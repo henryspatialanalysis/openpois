@@ -1,16 +1,29 @@
 """
-Exploratory script for downloading a current Overture Maps Places snapshot.
+Download the current US Overture Maps Places snapshot as a GeoParquet file.
 
-This script uses openpois.overture.download to:
-1. Auto-detect the latest Overture Maps release from S3 (or use a pinned date).
-2. Query the S3 GeoParquet files via DuckDB, filtered by bbox and taxonomy.
-3. Save the result as a GeoParquet file.
+Queries Overture Maps GeoParquet files on public S3 using DuckDB's httpfs and
+spatial extensions, filtering to the configured bounding box and L0 taxonomy
+categories. No authentication required — Overture Maps data is publicly
+accessible without credentials.
 
-No authentication required. Data is public on S3.
+Auto-detects the latest available Overture release from S3 unless a specific
+release_date is pinned in config.yaml.
 
-Smoke test: temporarily narrow the bbox in config.yaml to the Seattle area
-(use the existing 'download.bbox' values) to verify the query before running
-the full CONUS download.
+Smoke test: narrow download.general.bbox in config.yaml to the Seattle area
+to verify the DuckDB query before running the full CONUS download.
+
+Config keys used (config.yaml):
+    download.overture.release_date           — pinned release (null = auto-detect)
+    download.overture.s3_bucket              — Overture Maps S3 bucket name
+    download.overture.s3_region              — AWS region of the Overture bucket
+    download.overture.taxonomy_l0_categories — L0 category filter list
+    download.general.bbox                    — WGS-84 bbox [xmin, ymin, xmax, ymax]
+    directories.snapshot_overture            — output directory
+
+Output file:
+    overture_snapshot.parquet — GeoParquet with ~7.2M US POIs
+        Columns: overture_id, overture_name, taxonomy_l0, taxonomy_l1,
+        brand_name, confidence, geometry, source
 """
 from config_versioned import Config
 from openpois.io.overture import download_overture_snapshot

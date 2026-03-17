@@ -1,9 +1,27 @@
 """
-Exploratory data viz script for OSM observations.
+Plot OSM tag stability curves from observation data.
 
-This script:
-1. Reads in the OSM observations from a CSV file.
-2. Creates time series plots of the observations, showing how many remain open over time.
+Reads osm_observations_{tag_key}.csv and computes Kaplan-Meier-style survival
+estimates showing what fraction of tag assignments remain unchanged over time.
+Saves two types of PNG figures:
+    1. Overall stability curve — all tags pooled into a single panel.
+    2. Per-subtype multi-panel curves — top-N values for each key in
+       download_keys, shown as separate facets on one figure per key.
+
+Config keys used (config.yaml):
+    directories.osm_data           — directory containing input CSV and viz/ output
+    download.download_keys         — tag keys used as grouping variables for subplots
+    osm_data.tag_key               — the tag being analysed (e.g. "amenity")
+    osm_data.timestamp_cols        — columns to parse as timestamps (rows with nulls dropped)
+    osm_data.top_n_types           — number of top subtype values per multi-panel figure
+    download.osm.end_date          — right-censoring date for still-unchanged tags
+
+Prerequisites:
+    Run osm_data/format_tabular.py first.
+
+Output files (in osm_data/viz/):
+    osm_changes_{tag_key}_all.png             — overall survival curve
+    osm_changes_{tag_key}_{key}.png           — per-subtype facet grid, one per key
 """
 
 import numpy as np
