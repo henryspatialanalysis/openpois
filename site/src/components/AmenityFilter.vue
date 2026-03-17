@@ -20,6 +20,22 @@
           Overture Maps tiles use granular subcategories. Filtering will be available after the taxonomy stabilizes in June 2026.
         </p>
       </template>
+      <template v-else-if="activeSource === 'conflated'">
+        <div class="filter-actions">
+          <button class="filter-action-btn" @click="selectAllConflated">All</button>
+          <button class="filter-action-btn" @click="selectNoneConflated">None</button>
+        </div>
+        <div class="conflated-filter-list">
+          <label v-for="lbl in conflatedLabels" :key="lbl">
+            <input
+              type="checkbox"
+              :checked="conflatedFilters[lbl]"
+              @change="toggleConflated(lbl)"
+            />
+            {{ lbl }}
+          </label>
+        </div>
+      </template>
 
     </div>
   </div>
@@ -33,9 +49,15 @@ const props = defineProps({
   activeSource: { type: String, required: true },
   osmFilters: { type: Object, required: true },
   overtureFilters: { type: Object, required: true },
+  conflatedFilters: { type: Object, required: true },
+  conflatedLabels: { type: Array, required: true },
 })
 
-const emit = defineEmits(['update:osm-filters', 'update:overture-filters'])
+const emit = defineEmits([
+  'update:osm-filters',
+  'update:overture-filters',
+  'update:conflated-filters',
+])
 const collapsed = ref(false)
 const osmFilterKeys = OSM_FILTER_KEYS
 const overtureCategories = OVERTURE_CATEGORIES
@@ -51,5 +73,23 @@ function toggleOverture(key) {
   })
 }
 
+function toggleConflated(label) {
+  emit('update:conflated-filters', {
+    ...props.conflatedFilters,
+    [label]: !props.conflatedFilters[label],
+  })
+}
+
+function selectAllConflated() {
+  const all = {}
+  for (const lbl of props.conflatedLabels) all[lbl] = true
+  emit('update:conflated-filters', all)
+}
+
+function selectNoneConflated() {
+  const none = {}
+  for (const lbl of props.conflatedLabels) none[lbl] = false
+  emit('update:conflated-filters', none)
+}
 
 </script>

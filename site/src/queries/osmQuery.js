@@ -51,7 +51,8 @@ export function buildOsmQuery(bbox, enabledKeys) {
       WHERE (${keyFilters || '1=1'})
         AND NOT (amenity IN (
           'parking', 'bicycle_parking', 'toilet', 'bench', 'clock', 'waste_basket',
-          'parking_entrance', 'recycling', 'drinking_water', 'bbq', 'vending_machine'
+          'parking_entrance', 'recycling', 'drinking_water', 'bbq', 'vending_machine',
+          'parking_space'
         ))
     )
     SELECT * FROM pts

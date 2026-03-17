@@ -254,6 +254,30 @@ body,
   cursor: pointer;
 }
 
+.filter-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.filter-action-btn {
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #f5f5f5;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filter-action-btn:hover {
+  background: #e5e5e5;
+}
+
+.conflated-filter-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
 /* POI popup */
 .poi-popup {
   background: #fff;

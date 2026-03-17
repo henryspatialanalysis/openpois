@@ -12,7 +12,12 @@
     >
       Overture Maps
     </button>
-
+    <button
+      :class="{ active: activeSource === 'conflated' }"
+      @click="$emit('update:source', 'conflated')"
+    >
+      Conflated
+    </button>
   </div>
 </template>
 

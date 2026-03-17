@@ -5,6 +5,9 @@ export const OSM_S3_BASE =
 export const FSQ_S3_BASE =
   'https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/foursquare/20260313/foursquare_snapshot_partitioned'
 
+export const CONFLATED_S3_BASE =
+  'https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/conflated/20260313/conflated_partitioned'
+
 // Overture PMTiles (latest release — update URL on each Overture monthly release)
 export const OVERTURE_PMTILES_URL =
   'https://tiles.overturemaps.org/2026-02-18.0/places.pmtiles'
@@ -55,6 +58,92 @@ export const BASE_MAP_STYLES = [
     label: 'Dark Matter',
     url: 'https://tiles.openfreemap.org/styles/dark',
   },
+]
+
+// Conflated shared_label categories
+// Sourced from src/openpois/conflation/data/match_radii.csv — update when labels change.
+export const CONFLATED_LABELS = [
+  'Alternative Medicine',
+  'Arcade',
+  'Arts Venue',
+  'Assisted Living',
+  'Bakery',
+  'Bank',
+  'Bar',
+  'Bike shop',
+  'Bookstore',
+  'Bowling Alley',
+  'Cafe',
+  'Car Dealer',
+  'Car Rental',
+  'Car Repair',
+  'Car Wash',
+  'Casino',
+  'Cell Phone Store',
+  'Charging Station',
+  'Clinic',
+  'Clothing Store',
+  'Community Center',
+  'Convenience Store',
+  'Counseling',
+  'Dentist',
+  'Dessert Shop',
+  'Discount Store',
+  'Dog Park',
+  'Dry Cleaning',
+  'Event Venue',
+  'Eye Care',
+  'Fast Food',
+  'Fitness Center',
+  'Florist',
+  'Furniture Store',
+  'Garden Store',
+  'Gas Station',
+  'Golf Course',
+  'Hardware',
+  'Jewelry Store',
+  'Kindergarten',
+  'Laundromat',
+  'Library',
+  'Liquor Store',
+  'Marina',
+  'Market',
+  'Massage Therapy',
+  'Maternity Center',
+  'Mental Health',
+  'Movie Theater',
+  'Museum',
+  'Nightclub',
+  'Occupational Therapy',
+  'Park',
+  'Performing Arts',
+  'Pet Store',
+  'Pharmacy',
+  'Physical Therapy',
+  'Playground',
+  'Post Office',
+  'Recreation',
+  'Restaurant',
+  'Salon and Hair',
+  'School',
+  'Shoe Store',
+  'Shopping Center',
+  'Social Club',
+  'Specialty Store',
+  'Speech Therapist',
+  'Sports Outlet',
+  'Stadium',
+  'Supermarket',
+  'Swimming Pool',
+  'Thrift Store',
+  'Tire Store',
+  'University',
+  'Veterinarian',
+  'Wholesale Store',
+  // "Other" categories last, unchecked by default
+  'Other Amenity',
+  'Other Healthcare',
+  'Other Shop',
 ]
 
 // Foursquare L1 categories

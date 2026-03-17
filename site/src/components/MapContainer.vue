@@ -16,7 +16,7 @@
     </button>
 
     <ConfidenceLegend
-      v-if="props.activeSource === 'osm' || props.activeSource === 'overture'"
+      v-if="props.activeSource === 'osm' || props.activeSource === 'overture' || props.activeSource === 'conflated'"
     />
 
     <div class="basemap-switcher">
@@ -55,6 +55,7 @@ import { useDuckDB } from '../composables/useDuckDB.js'
 import { useGeolocation } from '../composables/useGeolocation.js'
 import { createQueryDebouncer } from '../queries/queryDebouncer.js'
 import { buildOsmQuery } from '../queries/osmQuery.js'
+import { buildConflatedQuery } from '../queries/conflatedQuery.js'
 import {
   getOsmLayer,
   updateOsmFeatures,
@@ -65,6 +66,11 @@ import {
   updateOvertureFilters,
   wrapOvertureFeature,
 } from '../layers/overtureLayer.js'
+import {
+  getConflatedLayer,
+  updateConflatedFeatures,
+  updateConflatedClusterMode,
+} from '../layers/conflatedLayer.js'
 import { arrowToFeatures, extentToLonLatBbox } from '../utils.js'
 import {
   BASE_MAP_STYLES,
@@ -77,7 +83,7 @@ const props = defineProps({
   activeSource: { type: String, required: true },
   osmFilters: { type: Object, required: true },
   overtureFilters: { type: Object, required: true },
-
+  conflatedFilters: { type: Object, required: true },
 })
 
 const emit = defineEmits(['zoom-changed'])
@@ -100,7 +106,7 @@ let geoOverlay = null
 
 // Helper: get all data layers
 function getDataLayers() {
-  return [getOsmLayer(), getOvertureLayer()]
+  return [getOsmLayer(), getOvertureLayer(), getConflatedLayer()]
 }
 
 onMounted(async () => {
@@ -120,13 +126,15 @@ onMounted(async () => {
 
   const osmLyr = getOsmLayer()
   const overtureLyr = getOvertureLayer()
+  const conflatedLyr = getConflatedLayer()
   osmLyr.setVisible(true)
   overtureLyr.setVisible(false)
+  conflatedLyr.setVisible(false)
 
   const olMap = new Map({
     target: mapEl.value,
     view,
-    layers: [fallbackBase, osmLyr, overtureLyr],
+    layers: [fallbackBase, osmLyr, overtureLyr, conflatedLyr],
   })
   map.value = olMap
 
@@ -155,6 +163,7 @@ onMounted(async () => {
     const z = view.getZoom()
     currentZoom.value = z
     updateClusterMode(z)
+    updateConflatedClusterMode(z)
     loadData()
   })
 
@@ -214,7 +223,7 @@ function switchBaseMap() {
 // ---- Data loading ----
 
 async function loadData() {
-  if (props.activeSource !== 'osm') return
+  if (props.activeSource !== 'osm' && props.activeSource !== 'conflated') return
   if (currentZoom.value < MIN_ZOOM_FOR_DATA) return
   if (!duckReady.value) return
 
@@ -222,7 +231,11 @@ async function loadData() {
     await debouncer.schedule(async () => {
       loading.value = true
       try {
-        await loadOsmData()
+        if (props.activeSource === 'osm') {
+          await loadOsmData()
+        } else if (props.activeSource === 'conflated') {
+          await loadConflatedData()
+        }
       } finally {
         loading.value = false
       }
@@ -258,6 +271,27 @@ async function loadOsmData() {
   updateOsmFeatures(features)
 }
 
+async function loadConflatedData() {
+  const extent = map.value.getView().calculateExtent()
+  const bbox = extentToLonLatBbox(extent)
+
+  const enabledLabels = Object.entries(props.conflatedFilters)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+
+  if (enabledLabels.length === 0) {
+    updateConflatedFeatures([])
+    return
+  }
+
+  const sql = buildConflatedQuery(bbox, enabledLabels)
+  if (!sql) return
+
+  const result = await runQuery(sql)
+  const features = arrowToFeatures(result)
+  updateConflatedFeatures(features)
+}
+
 // ---- Interaction ----
 
 function handleClick(evt) {
@@ -271,7 +305,7 @@ function handleClick(evt) {
       return true
     }
 
-    // OSM VectorLayer (with Cluster)
+    // OSM or Conflated VectorLayer (with Cluster)
     const subFeatures = feature.get('features')
     if (subFeatures && subFeatures.length > 1) {
       const geom = feature.getGeometry()
@@ -356,6 +390,7 @@ defineExpose({ flyToBbox })
 watch(() => props.activeSource, (src) => {
   getOsmLayer().setVisible(src === 'osm')
   getOvertureLayer().setVisible(src === 'overture')
+  getConflatedLayer().setVisible(src === 'conflated')
   closePopup()
   loadData()
 })
@@ -372,5 +407,10 @@ watch(
   { deep: true }
 )
 
+watch(
+  () => props.conflatedFilters,
+  () => { if (props.activeSource === 'conflated') loadData() },
+  { deep: true }
+)
 
 </script>

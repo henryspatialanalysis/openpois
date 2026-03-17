@@ -85,7 +85,7 @@
         <a
           v-if="entry.osm_id"
           class="osm-link"
-          :href="`https://www.openstreetmap.org/${entry.osm_type || 'node'}/${entry.osm_id}`"
+          :href="`https://www.openstreetmap.org/${entry.osm_type || 'node'}/${cleanOsmId(entry.osm_id)}`"
           target="_blank"
           rel="noopener"
         >
@@ -126,6 +126,84 @@
         <div v-if="entry.id" class="detail-row detail-row--muted">
           <span class="detail-label">ID</span>
           <span class="detail-value detail-monospace">{{ entry.id }}</span>
+        </div>
+      </template>
+
+      <!-- Conflated details -->
+      <template v-if="source === 'conflated'">
+        <div v-if="entry.shared_label" class="detail-row">
+          <span class="detail-label">Category</span>
+          <span class="detail-value">{{ formatCategory(entry.shared_label) }}</span>
+        </div>
+        <div v-if="entry.source" class="detail-row">
+          <span class="detail-label">Match type</span>
+          <span class="detail-value">{{ formatMatchType(entry.source) }}</span>
+        </div>
+        <div v-if="entry.brand" class="detail-row">
+          <span class="detail-label">Brand</span>
+          <span class="detail-value">{{ entry.brand }}</span>
+        </div>
+        <div v-if="showBothNames(entry)" class="detail-row">
+          <span class="detail-label">OSM name</span>
+          <span class="detail-value">{{ entry.osm_name }}</span>
+        </div>
+        <div v-if="showBothNames(entry)" class="detail-row">
+          <span class="detail-label">Overture name</span>
+          <span class="detail-value">{{ entry.overture_name }}</span>
+        </div>
+        <div v-if="entryConf(entry) != null" class="detail-row">
+          <span class="detail-label">Confidence</span>
+          <span class="detail-value">
+            {{ (entryConf(entry) * 100).toFixed(0) }}%
+            <span
+              v-if="entry.conf_lower != null && entry.conf_upper != null
+                && !isNaN(entry.conf_lower) && !isNaN(entry.conf_upper)"
+              class="conf-interval"
+            >
+              ({{ (entry.conf_lower * 100).toFixed(0) }}%–{{ (entry.conf_upper * 100).toFixed(0) }}%)
+            </span>
+          </span>
+        </div>
+        <div v-if="entryConf(entry) != null" class="confidence-bar">
+          <div
+            class="confidence-fill"
+            :style="{
+              width: (entryConf(entry) * 100) + '%',
+              backgroundColor: confidenceColor(entryConf(entry)),
+            }"
+          />
+        </div>
+        <div
+          v-if="validNum(entry.osm_conf_mean) && validNum(entry.overture_confidence)"
+          class="detail-row"
+        >
+          <span class="detail-label">Source scores</span>
+          <span class="detail-value">
+            OSM {{ (entry.osm_conf_mean * 100).toFixed(0) }}%
+            / Overture {{ (entry.overture_confidence * 100).toFixed(0) }}%
+          </span>
+        </div>
+        <div v-if="validNum(entry.match_score)" class="detail-row">
+          <span class="detail-label">Match score</span>
+          <span class="detail-value">
+            {{ (entry.match_score * 100).toFixed(0) }}%
+            <template v-if="validNum(entry.match_distance_m)">
+              ({{ entry.match_distance_m.toFixed(0) }} m)
+            </template>
+          </span>
+        </div>
+        <a
+          v-if="entry.osm_id"
+          class="osm-link"
+          :href="`https://www.openstreetmap.org/node/${cleanOsmId(entry.osm_id)}`"
+          target="_blank"
+          rel="noopener"
+        >
+          View on OpenStreetMap ↗
+        </a>
+        <div v-if="entry.unified_id" class="detail-row detail-row--muted">
+          <span class="detail-label">ID</span>
+          <span class="detail-value detail-monospace">{{ entry.unified_id }}</span>
         </div>
       </template>
     </template>
@@ -184,5 +262,29 @@ function formatLastEdited(raw) {
 function formatCategory(cat) {
   if (!cat) return ''
   return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function formatMatchType(src) {
+  if (src === 'matched') return 'Matched (OSM + Overture)'
+  if (src === 'osm') return 'OSM only'
+  if (src === 'overture') return 'Overture only'
+  return src
+}
+
+function showBothNames(entry) {
+  return entry.source === 'matched'
+    && entry.osm_name && entry.overture_name
+    && entry.osm_name !== entry.overture_name
+}
+
+function validNum(v) {
+  return v != null && !isNaN(v)
+}
+
+function cleanOsmId(id) {
+  if (id == null) return null
+  const s = String(id)
+  // Strip trailing ".0" from float-cast IDs
+  return s.replace(/\.0$/, '')
 }
 </script>
