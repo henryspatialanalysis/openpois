@@ -3,7 +3,7 @@ name: Deploy site to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**']
+    paths: ['site/**', 'src/**', 'docs/**']
   workflow_dispatch:
 
 permissions:
@@ -42,6 +42,23 @@ jobs:
         working-directory: site
         env:
           VITE_STADIA_API_KEY: ${{ secrets.VITE_STADIA_API_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install -r docs/requirements.txt pandas
+
+      - name: Build taxonomy page
+        run: python scripts/build_taxonomy.py
+
+      - name: Build Sphinx docs
+        run: make html
+        working-directory: docs
+
+      - name: Copy Sphinx docs into site dist
+        run: cp -r docs/_build/html site/dist/docs
 
       - uses: actions/upload-pages-artifact@v3
         with:

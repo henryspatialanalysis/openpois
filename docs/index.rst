@@ -1,16 +1,18 @@
-.. ai-python docs documentation master file, created by
-   sphinx-quickstart on Thu May  5 14:06:45 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+openpois
+========
 
-Welcome to ai-python docs's documentation!
-==========================================
+A Python library for conflating Points of Interest (POIs) across
+OpenStreetMap, Overture Maps, and Foursquare OS Places, with utilities for
+modeling POI stability over time using historical OSM data.
+
+- **GitHub:** https://github.com/henryspatialanalysis/openpois
+- **Web map:** https://henryspatialanalysis.github.io/openpois/
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   modules
 
+   api
 
 Indices and tables
 ==================

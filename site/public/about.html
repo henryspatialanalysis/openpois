@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About – OpenPOIs</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-size: 15px;
+      color: #333;
+      background: #f8f9fa;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-back {
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .header-back:hover {
+      text-decoration: underline;
+    }
+
+    .header-spacer {
+      flex: 1;
+    }
+
+    .header-link {
+      color: #555;
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-link:hover {
+      color: #333;
+      text-decoration: underline;
+    }
+
+    .brand-logo {
+      height: 28px;
+      width: auto;
+      display: block;
+    }
+
+    /* GitHub icon SVG */
+    .github-icon {
+      width: 20px;
+      height: 20px;
+      fill: #555;
+      flex-shrink: 0;
+    }
+
+    .header-link:hover .github-icon {
+      fill: #333;
+    }
+
+    /* Main content */
+    .content {
+      max-width: 760px;
+      margin: 48px auto;
+      padding: 0 24px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 36px 0 12px;
+      color: #111;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    .lead {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 24px;
+    }
+
+    /* Source cards */
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0 24px;
+    }
+
+    .source-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 16px;
+    }
+
+    .source-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #111;
+    }
+
+    .source-card .count {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 6px;
+    }
+
+    .source-card p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 0;
+    }
+
+    /* Confidence table */
+    .conf-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px;
+      font-size: 14px;
+    }
+
+    .conf-table th, .conf-table td {
+      padding: 8px 12px;
+    }
+
+    .conf-table thead tr {
+      border-bottom: 2px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .conf-table tbody tr {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .conf-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .conf-table th:first-child,
+    .conf-table td:first-child {
+      width: 28px;
+      padding-left: 0;
+    }
+
+    .conf-table th:nth-child(2),
+    .conf-table td:nth-child(2) {
+      width: 90px;
+      text-align: center;
+    }
+
+    .conf-table th:nth-child(3),
+    .conf-table td:nth-child(3) {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Confidence legend */
+    .confidence-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+    }
+
+    .conf-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    /* S3 data blocks */
+    .s3-block {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+
+    .s3-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .s3-block-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .s3-browse-link {
+      font-size: 13px;
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .s3-browse-link:hover { text-decoration: underline; }
+
+    .s3-path {
+      display: block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #555;
+      background: #f3f4f6;
+      padding: 6px 10px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    /* API docs link */
+    .docs-link {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 20px;
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .docs-link:hover {
+      background: #1d4ed8;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: #999;
+      font-size: 13px;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 48px;
+    }
+
+    footer a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .content {
+        margin: 28px auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="header">
+    <a href="/" class="header-back">&#8592; Back to Map</a>
+    <div class="header-spacer"></div>
+    <a href="https://github.com/henryspatialanalysis/openpois" target="_blank" rel="noopener noreferrer"
+      class="header-link" aria-label="GitHub repository">
+      <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+          0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+          -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+          .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+          -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0
+          1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+          1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01
+          1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+      </svg>
+      GitHub
+    </a>
+    <a href="https://henryspatialanalysis.com/" target="_blank" rel="noopener noreferrer" class="header-link">
+      <img src="/logo.png" alt="Henry Spatial Analysis" class="brand-logo" />
+    </a>
+  </header>
+
+  <main class="content">
+    <h1>OpenPOIs</h1>
+    <p class="lead">
+      An open-source toolkit for comparing and conflating Points of Interest
+      (POIs) across major geospatial datasets.
+    </p>
+
+    <h2>What is this?</h2>
+    <p>
+      OpenPOIs downloads current US-wide POI snapshots from multiple publicly
+      available sources — currently OpenStreetMap and Overture Maps — and
+      conflates them into a single unified dataset. The web map lets you
+      explore each source side by side, or view the conflated output with a
+      confidence score showing how well each POI is corroborated across
+      sources.
+    </p>
+    <p>
+      The project is also a Python library for modeling POI stability over
+      time using historical OpenStreetMap data. It fits an empirical Bayes
+      Poisson model to estimate per-category change rates, giving a sense of
+      how likely a given POI is to have changed since it was last observed.
+    </p>
+
+    <h2>Data Sources</h2>
+    <div class="source-grid">
+      <div class="source-card">
+        <h3>OpenStreetMap</h3>
+        <div class="count">~7.8M</div>
+        <p>
+          US POIs from the Geofabrik extract, filtered to amenity, shop,
+          leisure, and healthcare tags.
+        </p>
+      </div>
+      <div class="source-card">
+        <h3>Overture Maps</h3>
+        <div class="count">~7.2M</div>
+        <p>
+          Places from the Overture Maps Foundation dataset, queried directly
+          from their public S3 bucket via DuckDB.
+        </p>
+      </div>
+    </div>
+    <p>
+      All snapshots are US-wide and are periodically refreshed. The release
+      date for each snapshot is tracked in the project configuration.
+    </p>
+
+    <h2>The Conflation Process</h2>
+    <p>
+      Conflation matches POIs across the three sources into a single unified
+      record. The process works as follows:
+    </p>
+    <p>
+      <strong>Taxonomy normalization:</strong> Each source uses its own
+      category system. OpenPOIs maps all three to a shared set of ~50 labels
+      (e.g., Cafe, Bank, Pharmacy) using manually curated crosswalks. This
+      shared taxonomy is used both for filtering in the web map and to set
+      per-category match distances. See the full
+      <a href="/taxonomy.html">taxonomy reference</a> for a complete mapping.
+    </p>
+    <p>
+      <strong>Spatial matching:</strong> Within each shared-label group,
+      nearby POIs from different sources are candidate matches. Match radii
+      vary by category — a small neighborhood coffee shop uses a tighter
+      radius than a large hospital campus.
+    </p>
+    <p>
+      <strong>Confidence scoring:</strong> Each conflated POI receives a
+      confidence score from 0 to 1, representing the estimated probability
+      that the POI is real and currently present.
+    </p>
+    <p>The confidence score is visualized on the map with a color ramp:</p>
+    <table class="conf-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Level</th>
+          <th>Score</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="conf-swatch" style="background:#d73027;"></div></td>
+          <td>Low</td>
+          <td>&lt; 30%</td>
+          <td>Typically included in a single data source with low confidence</td>
+        </tr>
+        <tr>
+          <td><div class="conf-swatch" style="background:#fee08b;"></div></td>
+          <td>Medium</td>
+          <td>30% – 70%</td>
+          <td>Typically included in multiple data sources with low confidence, or a single data source with medium-high confidence</td>
+        </tr>
+        <tr>
+          <td><div class="conf-swatch" style="background:#a8c176;"></div></td>
+          <td>High</td>
+          <td>70% – 90%</td>
+          <td>Typically included in multiple data sources with medium confidence, or a single data source with high confidence</td>
+        </tr>
+        <tr>
+          <td><div class="conf-swatch" style="background:#1a9850;"></div></td>
+          <td>Very high</td>
+          <td>&gt; 90%</td>
+          <td>Typically included in multiple data sources with high confidence</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Data Access &amp; Licensing</h2>
+    <p>
+      OpenStreetMap data is distributed under the
+      <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener noreferrer">
+        Open Database License (ODbL)</a>.
+      Because the conflated dataset incorporates OpenStreetMap, the combination
+      is also covered by ODbL. You are free to copy, distribute, and use the
+      data, provided that you attribute OpenStreetMap contributors and share
+      any derivative databases under the same license.
+    </p>
+    <p>
+      The raw snapshot and conflated Parquet files are publicly available on
+      Amazon S3 and can be queried directly with DuckDB, boto3, or any
+      tool that supports S3 access.
+    </p>
+    <div class="s3-block">
+      <div class="s3-block-header">
+        <span class="s3-block-title">OSM snapshot</span>
+        <a class="s3-browse-link"
+          href="https://openpois-public.s3.us-west-2.amazonaws.com/?list-type=2&prefix=snapshots/osm/20260313/osm_snapshot_partitioned/"
+          target="_blank" rel="noopener noreferrer">Browse files &rarr;</a>
+      </div>
+      <code class="s3-path">s3://openpois-public/snapshots/osm/20260313/osm_snapshot_partitioned/</code>
+    </div>
+    <div class="s3-block">
+      <div class="s3-block-header">
+        <span class="s3-block-title">Conflated dataset</span>
+        <a class="s3-browse-link"
+          href="https://openpois-public.s3.us-west-2.amazonaws.com/?list-type=2&prefix=snapshots/conflated/20260313/conflated_partitioned/"
+          target="_blank" rel="noopener noreferrer">Browse files &rarr;</a>
+      </div>
+      <code class="s3-path">s3://openpois-public/snapshots/conflated/20260313/conflated_partitioned/</code>
+    </div>
+
+    <h2>Python API Documentation</h2>
+    <p>
+      The <code>openpois</code> Python package provides modules for
+      downloading POI snapshots, conflating across sources, and modeling
+      historical POI change rates.
+    </p>
+    <a href="/docs/" class="docs-link">View Python API Docs &rarr;</a>
+  </main>
+
+  <footer>
+    OpenPOIs &mdash; by <a href="https://henryspatialanalysis.com/">Henry Spatial Analysis</a>
+    &mdash; <a href="https://github.com/henryspatialanalysis/openpois">GitHub</a>
+    &mdash; MIT License
+  </footer>
+
+</body>
+
+</html>

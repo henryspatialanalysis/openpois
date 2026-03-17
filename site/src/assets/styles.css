@@ -34,9 +34,17 @@ body,
   overflow: hidden;
 }
 
+/* Right-side group: About link + brand logo */
+.top-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 /* Brand logo */
 .brand-logo-link {
-  margin-left: auto;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -46,6 +54,20 @@ body,
   height: 28px;
   width: auto;
   display: block;
+}
+
+/* About link */
+.about-link {
+  color: #555;
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+  color: #333;
 }
 
 /* Source toggle */
