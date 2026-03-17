@@ -1,0 +1,24 @@
+/* Navigation links in the top-right content icon bar */
+.openpois-nav-links {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size--small);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.openpois-nav-links a {
+  padding: 0 5px;
+  color: var(--color-foreground-secondary);
+  text-decoration: none;
+}
+
+.openpois-nav-links a:hover {
+  color: var(--color-foreground-primary);
+  text-decoration: underline;
+}
+
+.openpois-nav-links .nav-sep {
+  color: var(--color-foreground-border);
+  user-select: none;
+}

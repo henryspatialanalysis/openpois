@@ -12,6 +12,7 @@ modeling POI stability over time using historical OSM data.
    :maxdepth: 2
    :caption: Contents:
 
+   workflows
    api
 
 Indices and tables

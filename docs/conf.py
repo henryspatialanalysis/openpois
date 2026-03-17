@@ -66,4 +66,12 @@ python_maximum_signature_line_length = 1
 
 # -- Options for HTML output ---------------------------------------------------
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
+
+html_theme_options = {
+    # Show only our custom view-this-page override (no edit button)
+    "top_of_page_buttons": ["view"],
+}
+
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
