@@ -146,6 +146,7 @@ directories:
 
 # Settings for POI conflation
 conflation:
+  osm_confidence_weight: 0.8
   overture_confidence_weight: 0.7
   min_match_score: 0.50
   max_radius_m: 200
