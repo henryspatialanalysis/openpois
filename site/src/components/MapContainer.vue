@@ -19,17 +19,34 @@
       v-if="props.activeSource === 'osm' || props.activeSource === 'overture' || props.activeSource === 'conflated'"
     />
 
-    <div class="basemap-switcher">
+    <!-- Desktop: native select -->
+    <div class="basemap-switcher basemap-switcher-desktop">
       <select v-model="selectedStyle" @change="switchBaseMap">
-        <option
-          v-for="s in baseMapStyles"
-          :key="s.key"
-          :value="s.key"
-        >
+        <option v-for="s in baseMapStyles" :key="s.key" :value="s.key">
           {{ s.label }}
         </option>
       </select>
     </div>
+
+    <!-- Mobile: button + centered modal -->
+    <button class="basemap-switcher basemap-mobile-btn" @click="basemapModalOpen = true">
+      {{ baseMapStyles.find(s => s.key === selectedStyle)?.label }} ▾
+    </button>
+    <Teleport to="body">
+      <div v-if="basemapModalOpen" class="basemap-modal-overlay" @click.self="basemapModalOpen = false">
+        <div class="basemap-modal">
+          <div class="basemap-modal-title">Base Map</div>
+          <button
+            v-for="s in baseMapStyles"
+            :key="s.key"
+            :class="['basemap-modal-option', { active: selectedStyle === s.key }]"
+            @click="selectBasemap(s.key)"
+          >
+            {{ s.label }}
+          </button>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Popup overlay anchor (managed by OL Overlay, not Vue v-if) -->
     <div ref="popupEl">
@@ -45,8 +62,6 @@ import {
 import Map from 'ol/Map'
 import View from 'ol/View'
 import Overlay from 'ol/Overlay'
-import TileLayer from 'ol/layer/Tile'
-import XYZ from 'ol/source/XYZ'
 import { fromLonLat, transformExtent } from 'ol/proj'
 import { apply } from 'ol-mapbox-style'
 import PoiPopup from './PoiPopup.vue'
@@ -95,6 +110,7 @@ const popupOverlay = shallowRef(null)
 const selectedFeature = shallowRef(null)
 const loading = ref(false)
 const selectedStyle = ref('positron')
+const basemapModalOpen = ref(false)
 const currentZoom = ref(INITIAL_ZOOM)
 const baseMapStyles = BASE_MAP_STYLES
 
@@ -117,14 +133,6 @@ onMounted(async () => {
     minZoom: 14,
   })
 
-  // Start with a raster fallback so the map is visible immediately
-  const fallbackBase = new TileLayer({
-    source: new XYZ({
-      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      maxZoom: 19,
-    }),
-  })
-
   const osmLyr = getOsmLayer()
   const overtureLyr = getOvertureLayer()
   const conflatedLyr = getConflatedLayer()
@@ -135,9 +143,11 @@ onMounted(async () => {
   const olMap = new Map({
     target: mapEl.value,
     view,
-    layers: [fallbackBase, osmLyr, overtureLyr, conflatedLyr],
+    layers: [osmLyr, overtureLyr, conflatedLyr],
   })
   map.value = olMap
+
+  document.getElementById('initial-loader')?.remove()
 
   // Try to apply vector tile style (replaces fallback raster)
   applyBaseStyle('positron')
@@ -219,6 +229,12 @@ async function applyBaseStyle(styleKey) {
 
 function switchBaseMap() {
   applyBaseStyle(selectedStyle.value)
+}
+
+function selectBasemap(key) {
+  selectedStyle.value = key
+  basemapModalOpen.value = false
+  applyBaseStyle(key)
 }
 
 // ---- Data loading ----
@@ -428,5 +444,9 @@ watch(
   () => { if (props.activeSource === 'conflated') loadData() },
   { deep: true }
 )
+
+// Fire initial load once DuckDB is ready (covers the case where the view
+// never changes and moveend never fires).
+watch(duckReady, (isReady) => { if (isReady) loadData() })
 
 </script>
