@@ -50,7 +50,8 @@ export function buildOsmQuery(bbox, enabledKeys) {
       FROM read_parquet([${urlList}], union_by_name = true)
       WHERE (${keyFilters || '1=1'})
         AND NOT (amenity IN (
-          'parking', 'bicycle_parking', 'toilet', 'bench', 'clock', 'waste_basket'
+          'parking', 'bicycle_parking', 'toilet', 'bench', 'clock', 'waste_basket',
+          'parking_entrance', 'recycling', 'drinking_water', 'bbq', 'vending_machine'
         ))
     )
     SELECT * FROM pts
