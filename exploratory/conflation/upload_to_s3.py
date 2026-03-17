@@ -1,11 +1,10 @@
 """
-Upload the geohash-partitioned OSM snapshot to a public S3 bucket.
+Upload the geohash-partitioned conflated POI dataset to a public S3 bucket.
 
-Reads the partitioned dataset directory from config and uploads all parquet
-files to S3 with public-read ACL, preserving the Hive partition layout under
-a versioned S3 prefix:
+Reads the partitioned dataset directory from config and uploads all parquet files to S3
+with public-read ACL, preserving the Hive partition layout under a versioned S3 prefix:
 
-    s3://<bucket>/<s3_prefix>/<aws_version>/osm_snapshot_partitioned/
+    s3://<bucket>/<s3_prefix_conflation>/<aws_version>/conflated_partitioned/
         geohash_prefix=9q/part-0.parquet
         geohash_prefix=dr/part-0.parquet
         ...
@@ -57,10 +56,10 @@ from openpois.io.s3 import upload_partitioned_dataset
 
 config = Config("~/repos/openpois/config.yaml")
 
-PARTITIONED_DIR = config.get_file_path("snapshot_osm", "partitioned")
+PARTITIONED_DIR = config.get_file_path("conflation", "partitioned")
 AWS_VERSION = config.get("versions", "aws")
 S3_BUCKET = config.get("upload", "s3_bucket")
-S3_PREFIX = config.get("upload", "s3_prefix_osm")
+S3_PREFIX = config.get("upload", "s3_prefix_conflation")
 S3_REGION = config.get("upload", "s3_region")
 
 
