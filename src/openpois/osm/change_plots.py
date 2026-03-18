@@ -23,12 +23,13 @@ def change_plot_reshape_data(
     Reshape data for the change plot. The data comes in with one row per POI-tag, and
     is reshaped by elapsed days since the POI-tag was added. For each elapsed day, there
     are four possibilities:
-        1. Confirmed unchanged: The tag was observed unchanged on or *after* this day
-        2. Confirmed changed: The tag was last observed changed on or *before* this day
-        2. Unsure: The tag was last observed unchanged *before* this day, but has not yet
-            been observed changed
-        4. Aged out: The maximum time elapsed between when the tag was added and our data
-            download is *before* this day, so we should drop it from the plot
+
+    1. Confirmed unchanged: The tag was observed unchanged on or *after* this day
+    2. Confirmed changed: The tag was last observed changed on or *before* this day
+    3. Unsure: The tag was last observed unchanged *before* this day, but has not yet
+       been observed changed
+    4. Aged out: The maximum time elapsed between when the tag was added and our data
+       download is *before* this day, so we should drop it from the plot
 
     Args:
         observations: DataFrame with observations. Each row is an iteration of a

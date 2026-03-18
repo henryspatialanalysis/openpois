@@ -8,6 +8,7 @@ This module downloads a current/latest Overture Maps Places snapshot for a
 given bounding box and set of taxonomy categories.
 
 It is broken into the following functions:
+
 - get_latest_release_date: Finds the most recent Overture release by listing S3.
 - build_overture_s3_path: Constructs the S3 glob path for a given release.
 - download_overture_snapshot: Queries S3 via DuckDB, filters by bbox and
@@ -90,9 +91,8 @@ def build_overture_s3_path(
         bucket: The S3 bucket name.
 
     Returns:
-        S3 path string suitable for DuckDB read_parquet(), e.g.:
-        's3://overturemaps-us-west-2/release/2026-02-18.0/
-            theme=places/type=place/*.parquet'
+        S3 path string suitable for DuckDB ``read_parquet()``, e.g.
+        ``s3://overturemaps-us-west-2/release/2026-02-18.0/theme=places/type=place/``
     """
     return (
         f"s3://{bucket}/release/{release_date}"

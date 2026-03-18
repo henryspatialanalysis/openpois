@@ -7,6 +7,7 @@
 This module downloads OpenStreetMap data for a given area of interest.
 
 It is broken into the following functions:
+
 - build_query_string: Builds an Overpass query string for a given date and bbox.
 - build_date_range: Creates a list of dates for querying.
 - collect_element_ids: Queries Overpass for element IDs across a date range.

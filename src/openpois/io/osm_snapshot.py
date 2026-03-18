@@ -9,6 +9,7 @@ OpenStreetMap using a Geofabrik PBF extract, osmium-tool CLI pre-filtering,
 and pyosmium parsing.
 
 It is broken into the following functions:
+
 - download_pbf: Downloads a PBF file from a URL via streaming HTTP.
 - filter_pbf: Runs osmium tags-filter to produce a reduced POI-only PBF.
 - parse_pbf_to_geodataframe: Parses the filtered PBF with pyosmium into a
@@ -362,6 +363,7 @@ def download_osm_snapshot(
     GeoParquet.
 
     Steps:
+
     1. download_pbf  — streams the Geofabrik US extract (~11 GB) to
        raw_pbf_path.
     2. filter_pbf    — runs osmium tags-filter to produce a small POI-only PBF.
