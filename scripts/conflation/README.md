@@ -36,8 +36,8 @@ OSM POIs are assigned categories using the filter key priority order (shop >
 healthcare > leisure > amenity). If the specific tag value is not in the
 crosswalk, a wildcard (`*`) fallback for that key is used (default 50m radius).
 
-Overture POIs are matched by (taxonomy_l0, taxonomy_l1), falling back to
-l0-only match when l1 is missing.
+Overture POIs are matched using a 4-tier cascade from most to least specific:
+(L0, L1, L2), then (L0, L2), then (L0, L1), then L0-only.
 
 ### 2. Spatial Candidate Search
 

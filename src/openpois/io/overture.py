@@ -128,9 +128,12 @@ def download_overture_snapshot(
     Args:
         output_path: Path to write the output GeoParquet file.
         taxonomy_l0_categories: List of Overture taxonomy L0 values to retain.
-            Valid values include: 'eat_and_drink', 'retail',
-            'arts_and_entertainment', 'active_life', 'health_and_medical',
-            'accommodation', 'education', 'financial_service', etc.
+            Valid values (from S3 data as of 2026-02-18): 'food_and_drink',
+            'shopping', 'arts_and_entertainment', 'sports_and_recreation',
+            'health_care', 'services_and_business',
+            'travel_and_transportation', 'lifestyle_services', 'education',
+            'community_and_government', 'cultural_and_historic', 'lodging',
+            'geographic_entities'.
             See: https://docs.overturemaps.org/guides/places/taxonomy/
         bbox: Bounding box dict with keys 'xmin', 'ymin', 'xmax', 'ymax'
             in WGS84 degrees.
@@ -144,6 +147,7 @@ def download_overture_snapshot(
         GeoDataFrame with schema:
             source (str), overture_id (str), release_date (str),
             taxonomy_l0 (str), taxonomy_l1 (str, nullable),
+            taxonomy_l2 (str, nullable),
             overture_name (str, nullable), brand_name (str, nullable,
             from brand.names.primary), confidence (float64, nullable),
             geometry (Point, EPSG:4326)
@@ -167,6 +171,7 @@ def download_overture_snapshot(
             '{release_date}' AS release_date,
             taxonomy.hierarchy[1] AS taxonomy_l0,
             taxonomy.hierarchy[2] AS taxonomy_l1,
+            taxonomy.hierarchy[3] AS taxonomy_l2,
             names.primary AS overture_name,
             brand.names.primary AS brand_name,
             confidence,

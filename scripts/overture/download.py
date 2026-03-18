@@ -23,7 +23,7 @@ Config keys used (config.yaml):
 Output file:
     overture_snapshot.parquet — GeoParquet with ~7.2M US POIs
         Columns: overture_id, overture_name, taxonomy_l0, taxonomy_l1,
-        brand_name, confidence, geometry, source
+        taxonomy_l2, brand_name, confidence, geometry, source
 """
 from config_versioned import Config
 from openpois.io.overture import download_overture_snapshot

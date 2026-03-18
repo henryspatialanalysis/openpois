@@ -48,28 +48,44 @@ def mini_osm_crosswalk():
 
 @pytest.fixture
 def mini_overture_crosswalk():
-    """Small Overture crosswalk for focused tests."""
+    """Small Overture crosswalk covering all 4 tiers."""
     return pd.DataFrame(
         {
             "overture_l0": [
+                # Tier 1: L0 + L1 + L2 (all populated)
                 "food_and_drink", "food_and_drink",
-                "shopping",
+                "shopping", "shopping",
                 "sports_and_recreation",
+                # Tier 2: L0 + L2 (L1 empty)
+                "arts_and_entertainment",
+                # Tier 3: L0 + L1 (L2 empty, catch-all)
+                "shopping",
+                # Tier 4: L0-only (both L1 and L2 empty)
+                "shopping",
             ],
             "overture_l1": [
                 "restaurant", "beverage_shop",
-                "food_and_beverage_store",
+                "food_and_beverage_store", "market",
                 "park",
+                "",
+                "market",
+                "",
             ],
-            "poi_category": [
+            "overture_l2": [
                 "restaurant", "cafe",
-                "supermarket",
+                "supermarket", "farmers_market",
                 "park",
+                "college",
+                "",
+                "",
             ],
             "shared_label": [
                 "Restaurant", "Cafe",
-                "Supermarket",
+                "Supermarket", "Farmers Market",
                 "Park",
+                "University",
+                "Market",
+                "Other Shop",
             ],
         }
     )
@@ -83,10 +99,12 @@ def mini_match_radii():
             "shared_label": [
                 "Restaurant", "Cafe", "Other Amenity",
                 "Supermarket", "Other Shop", "Park",
+                "Farmers Market", "University", "Market",
             ],
             "match_radius_m": [
                 "100", "100", "100",
                 "200", "100", "200",
+                "100", "200", "50",
             ],
         }
     )
@@ -145,7 +163,7 @@ class TestLoadOvertureCrosswalk:
         cw = load_overture_crosswalk()
         assert set(cw.columns) == {
             "overture_l0", "overture_l1",
-            "poi_category", "shared_label",
+            "overture_l2", "shared_label",
         }
 
 
@@ -260,13 +278,15 @@ class TestAssignOsmSharedLabel:
 
 
 class TestAssignOvertureSharedLabel:
-    def test_exact_l0_l1_match(
+    def test_tier1_l0_l1_l2_match(
         self, mini_overture_crosswalk, mini_match_radii,
     ):
+        """Tier 1: exact (L0, L1, L2) match."""
         gdf = pd.DataFrame(
             {
                 "taxonomy_l0": ["food_and_drink"],
                 "taxonomy_l1": ["restaurant"],
+                "taxonomy_l2": ["restaurant"],
             }
         )
         labels, radii = assign_overture_shared_label(
@@ -275,6 +295,81 @@ class TestAssignOvertureSharedLabel:
         assert labels[0] == "Restaurant"
         assert radii[0] == 100.0
 
+    def test_tier1_differentiates_same_l1(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """Two POIs with same (L0, L1) but different L2 get
+        different labels via tier 1."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": [
+                    "shopping", "shopping",
+                ],
+                "taxonomy_l1": [
+                    "market", "market",
+                ],
+                "taxonomy_l2": [
+                    "farmers_market", "flea_market",
+                ],
+            }
+        )
+        labels, radii = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "Farmers Market"
+        # flea_market has no L2 match, falls to tier 3 catch-all
+        assert labels[1] == "Market"
+
+    def test_tier2_l0_l2_ignores_l1(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """Tier 2: (L0, L2) match ignores the L1 in data."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": ["arts_and_entertainment"],
+                "taxonomy_l1": ["performing_arts_venue"],
+                "taxonomy_l2": ["college"],
+            }
+        )
+        labels, radii = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "University"
+        assert radii[0] == 200.0
+
+    def test_tier3_l0_l1_catchall(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """Tier 3: (L0, L1) catch-all when L2 is unmatched."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": ["shopping"],
+                "taxonomy_l1": ["market"],
+                "taxonomy_l2": ["night_market"],
+            }
+        )
+        labels, radii = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "Market"
+        assert radii[0] == 50.0
+
+    def test_tier4_l0_fallback(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """Tier 4: L0-only when nothing else matches."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": ["shopping"],
+                "taxonomy_l1": ["unknown_l1"],
+                "taxonomy_l2": ["unknown_l2"],
+            }
+        )
+        labels, radii = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "Other Shop"
+
     def test_null_taxonomy(
         self, mini_overture_crosswalk, mini_match_radii,
     ):
@@ -282,6 +377,7 @@ class TestAssignOvertureSharedLabel:
             {
                 "taxonomy_l0": [None],
                 "taxonomy_l1": [None],
+                "taxonomy_l2": [None],
             }
         )
         labels, radii = assign_overture_shared_label(
@@ -289,6 +385,39 @@ class TestAssignOvertureSharedLabel:
         )
         assert labels[0] == ""
         assert radii[0] == 100.0
+
+    def test_backward_compat_no_l2_column(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """GeoDataFrame without taxonomy_l2 still works via
+        tier 3 and tier 4 fallback."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": ["shopping"],
+                "taxonomy_l1": ["market"],
+            }
+        )
+        labels, radii = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "Market"
+
+    def test_tier1_wins_over_tier3(
+        self, mini_overture_crosswalk, mini_match_radii,
+    ):
+        """Tier 1 (L0+L1+L2) takes priority over tier 3
+        (L0+L1 catch-all)."""
+        gdf = pd.DataFrame(
+            {
+                "taxonomy_l0": ["shopping"],
+                "taxonomy_l1": ["market"],
+                "taxonomy_l2": ["farmers_market"],
+            }
+        )
+        labels, _ = assign_overture_shared_label(
+            gdf, mini_overture_crosswalk, mini_match_radii,
+        )
+        assert labels[0] == "Farmers Market"
 
 
 # -----------------------------------------------------------------

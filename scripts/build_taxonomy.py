@@ -40,21 +40,29 @@ def osm_cell(group):
 
 
 def overture_cell(group):
-    """Format Overture categories for one shared_label, grouped by l0."""
-    by_l0 = {}
+    """Format Overture categories for one shared_label."""
+    parts = []
     for _, row in group.iterrows():
         l0 = row["overture_l0"]
-        l1 = row["overture_l1"] if pd.notna(row["overture_l1"]) else None
-        by_l0.setdefault(l0, set())
-        if l1:
-            by_l0[l0].add(l1)
-    parts = []
-    for l0, l1s in by_l0.items():
-        if l1s:
-            l1_str = ", ".join(sorted(l1s))
-            parts.append(f'<span class="tx-key">{l0}:</span> {l1_str}')
+        l1 = row.get("overture_l1", "")
+        l2 = row.get("overture_l2", "")
+        if l1 and l2:
+            parts.append(
+                f'<span class="tx-key">{l0} &rsaquo;'
+                f' {l1}:</span> {l2}'
+            )
+        elif l1:
+            parts.append(
+                f'<span class="tx-key">{l0}:</span> {l1}'
+            )
+        elif l2:
+            parts.append(
+                f'<span class="tx-key">{l0}:</span> {l2}'
+            )
         else:
-            parts.append(f'<span class="tx-key">{l0}</span>')
+            parts.append(
+                f'<span class="tx-key">{l0}</span>'
+            )
     return "<br>".join(parts)
 
 

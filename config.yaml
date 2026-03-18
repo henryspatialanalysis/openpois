@@ -5,8 +5,8 @@ versions:
   snapshot_osm: "20260313"
   snapshot_overture: "20260313"
   snapshot_foursquare: "20260313"
-  aws: "20260313"
-  conflation: "20260316"
+  aws: "20260318"
+  conflation: "20260318"
 
 # Settings for downloading data
 download:

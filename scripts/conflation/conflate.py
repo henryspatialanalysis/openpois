@@ -98,7 +98,7 @@ OSM_MATCH_COLS = [
     "conf_mean", "conf_lower", "conf_upper", "geometry",
 ]
 OVERTURE_MATCH_COLS = [
-    "overture_id", "taxonomy_l0", "taxonomy_l1",
+    "overture_id", "taxonomy_l0", "taxonomy_l1", "taxonomy_l2",
     "overture_name", "brand_name", "confidence", "geometry",
 ]
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     ]:
         if col in osm_gdf.columns:
             osm_gdf.drop(columns = col, inplace = True)
-    for col in ["taxonomy_l0", "taxonomy_l1"]:
+    for col in ["taxonomy_l0", "taxonomy_l1", "taxonomy_l2"]:
         if col in overture_gdf.columns:
             overture_gdf.drop(columns = col, inplace = True)
     gc.collect()

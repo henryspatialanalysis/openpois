@@ -59,7 +59,7 @@ def load_osm_crosswalk() -> pd.DataFrame:
 def load_overture_crosswalk() -> pd.DataFrame:
     """Load the Overture Maps taxonomy crosswalk CSV.
 
-    Columns: ``overture_l0, overture_l1, poi_category,
+    Columns: ``overture_l0, overture_l1, overture_l2,
     shared_label``.
     """
     return _load_csv("taxonomy_crosswalk_overture_maps.csv")
@@ -198,10 +198,18 @@ def assign_overture_shared_label(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Assign a ``shared_label`` and ``match_radius_m`` to each
-    Overture POI.
+    Overture POI using a 4-tier cascade from most to least specific.
 
-    Matches by ``(overture_l0, overture_l1)``.  Falls back to
-    l0-only match when l1 is missing or not found.
+    Tiers (applied in order, each only to unmatched rows):
+
+    1. **(L0, L1, L2)** — crosswalk rows with all three populated.
+    2. **(L0, L2)** — L1 empty in crosswalk; matches any L1.
+    3. **(L0, L1)** — L2 empty in crosswalk; catch-all for an L1.
+    4. **L0-only** — both L1 and L2 empty in crosswalk.
+
+    Backward-compatible: if the GeoDataFrame has no
+    ``taxonomy_l2`` column, tiers 1-2 produce no matches and
+    behaviour falls back to the old (L0, L1) + L0 logic.
 
     Returns:
         (shared_label ndarray of object, match_radius_m ndarray of
@@ -210,8 +218,11 @@ def assign_overture_shared_label(
     n = len(gdf)
     label = np.full(n, "", dtype = object)
     radius = np.full(n, default_radius_m, dtype = np.float64)
+    matched = np.zeros(n, dtype = bool)
 
     cw = overture_crosswalk.copy()
+    has_l1 = cw["overture_l1"] != ""
+    has_l2 = cw["overture_l2"] != ""
 
     # Build radius dict
     radii_dict: dict[str, float] = {}
@@ -220,65 +231,102 @@ def assign_overture_shared_label(
             row["match_radius_m"]
         )
 
-    # Exact (l0, l1) lookup — deduplicate, keep first
-    exact_rows = cw[cw["overture_l1"] != ""].copy()
-    exact_rows["_key"] = (
-        exact_rows["overture_l0"]
-        + "|"
-        + exact_rows["overture_l1"]
+    # -- Build lookup tables for each tier --------------------------
+
+    # Tier 1: (L0, L1, L2) — all three populated
+    t1 = cw[has_l1 & has_l2].copy()
+    t1["_key"] = (
+        t1["overture_l0"] + "|"
+        + t1["overture_l1"] + "|"
+        + t1["overture_l2"]
     )
-    exact_lkp = (
-        exact_rows.drop_duplicates("_key")
+    t1_lkp = (
+        t1.drop_duplicates("_key")
         .set_index("_key")["shared_label"]
     )
 
-    # l0-only fallback (rows with empty l1)
-    l0_rows = cw[cw["overture_l1"] == ""].copy()
-    l0_lkp = (
-        l0_rows.drop_duplicates("overture_l0")
+    # Tier 2: (L0, L2) — L1 empty, L2 populated
+    t2 = cw[~has_l1 & has_l2].copy()
+    t2["_key"] = t2["overture_l0"] + "|" + t2["overture_l2"]
+    t2_lkp = (
+        t2.drop_duplicates("_key")
+        .set_index("_key")["shared_label"]
+    )
+
+    # Tier 3: (L0, L1) — L1 populated, L2 empty
+    t3 = cw[has_l1 & ~has_l2].copy()
+    t3["_key"] = t3["overture_l0"] + "|" + t3["overture_l1"]
+    t3_lkp = (
+        t3.drop_duplicates("_key")
+        .set_index("_key")["shared_label"]
+    )
+
+    # Tier 4: L0-only — both L1 and L2 empty
+    t4 = cw[~has_l1 & ~has_l2].copy()
+    t4_lkp = (
+        t4.drop_duplicates("overture_l0")
         .set_index("overture_l0")["shared_label"]
     )
 
-    # Build composite keys from the dataset
-    l0_col = (
-        gdf["taxonomy_l0"].fillna("")
-        if "taxonomy_l0" in gdf.columns
-        else pd.Series("", index = gdf.index)
-    )
-    l1_col = (
-        gdf["taxonomy_l1"].fillna("")
-        if "taxonomy_l1" in gdf.columns
-        else pd.Series("", index = gdf.index)
-    )
-    composite_key = l0_col.astype(str) + "|" + l1_col.astype(str)
+    # -- Extract columns from the data ------------------------------
 
-    # Phase 1: exact (l0, l1) match
-    mapped_label = composite_key.map(exact_lkp)
-    found = mapped_label.notna().to_numpy()
-    labels_found = mapped_label.to_numpy()[found]
-    label[found] = labels_found
-    radius[found] = np.array(
-        [
-            radii_dict.get(lb, default_radius_m)
-            for lb in labels_found
-        ]
-    )
+    def _col(name: str) -> pd.Series:
+        if name in gdf.columns:
+            return gdf[name].fillna("").astype(str)
+        return pd.Series("", index = gdf.index)
 
-    # Phase 2: l0-only fallback for unmatched
-    remaining = ~found & (l0_col != "")
-    if remaining.any():
-        fb_label = l0_col[remaining].map(l0_lkp)
-        fb_found = fb_label.notna().to_numpy()
-        remaining_idx = np.where(remaining)[0]
-        pos = remaining_idx[fb_found]
-        fb_labels = fb_label.to_numpy()[fb_found]
-        label[pos] = fb_labels
-        radius[pos] = np.array(
-            [
-                radii_dict.get(lb, default_radius_m)
-                for lb in fb_labels
-            ]
+    l0 = _col("taxonomy_l0")
+    l1 = _col("taxonomy_l1")
+    l2 = _col("taxonomy_l2")
+
+    # -- Helper to apply a tier ------------------------------------
+
+    def _apply_tier(
+        keys: pd.Series,
+        lkp: pd.Series,
+        mask: np.ndarray,
+    ) -> None:
+        if not mask.any() or lkp.empty:
+            return
+        mapped = keys[mask].map(lkp)
+        hit = mapped.notna().to_numpy()
+        idx = np.where(mask)[0][hit]
+        labels = mapped.to_numpy()[hit]
+        label[idx] = labels
+        radius[idx] = np.array(
+            [radii_dict.get(lb, default_radius_m) for lb in labels]
         )
+        matched[idx] = True
+
+    # -- Apply tiers in order --------------------------------------
+
+    # Tier 1: (L0, L1, L2)
+    _apply_tier(
+        l0 + "|" + l1 + "|" + l2,
+        t1_lkp,
+        ~matched & (l0 != ""),
+    )
+
+    # Tier 2: (L0, L2) — ignores L1 in the data
+    _apply_tier(
+        l0 + "|" + l2,
+        t2_lkp,
+        ~matched & (l2 != ""),
+    )
+
+    # Tier 3: (L0, L1) — catch-all for an L1 group
+    _apply_tier(
+        l0 + "|" + l1,
+        t3_lkp,
+        ~matched & (l1 != ""),
+    )
+
+    # Tier 4: L0-only
+    _apply_tier(
+        l0,
+        t4_lkp,
+        ~matched & (l0 != ""),
+    )
 
     return label, radius
 
