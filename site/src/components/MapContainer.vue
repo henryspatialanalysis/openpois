@@ -156,11 +156,11 @@ onMounted(async () => {
   await nextTick()
   popupOverlay.value = new Overlay({
     element: popupEl.value,
-    autoPan: { animation: { duration: 200 } },
     positioning: 'bottom-center',
     offset: [0, -8],
   })
   olMap.addOverlay(popupOverlay.value)
+  popupEl.value.addEventListener('pointerdown', (e) => e.stopPropagation())
 
   olMap.on('singleclick', handleClick)
 

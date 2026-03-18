@@ -6,7 +6,7 @@ export const FSQ_S3_BASE =
   'https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/foursquare/20260313/foursquare_snapshot_partitioned'
 
 export const CONFLATED_S3_BASE =
-  'https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/conflated/20260313/conflated_partitioned'
+  'https://openpois-public.s3.us-west-2.amazonaws.com/snapshots/conflated/20260318/conflated_partitioned'
 
 // Overture PMTiles (latest release — update URL on each Overture monthly release)
 export const OVERTURE_PMTILES_URL =
