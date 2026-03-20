@@ -44,9 +44,12 @@ config = Config("~/repos/openpois/config.yaml")
 
 SAVE_DIR = config.get_dir_path("osm_data")
 VIZ_DIR = SAVE_DIR / "viz"
-OSM_KEYS = config.get("download", "download_keys")
+OSM_KEYS = config.get("download", "osm", "filter_keys")
 TAG_KEY = config.get("osm_data", "tag_key")
 END_DATE = pd.Timestamp(config.get("download", "osm", "end_date"), tz='UTC')
+MODEL_BASE = config.get_dir_path("model_output").parent
+MODEL_STUB = config.get("osm_data", "apply_model", "model_stub")
+ADJ_FACTOR = 1.0
 
 max_days = 365 * 10
 VIZ_DIR.mkdir(parents=True, exist_ok=True)
@@ -79,12 +82,40 @@ def fig_save(
         **kwargs
     )
 
+def get_preds_dict(model_stub: str | None, adj_factor: float = 1.0) -> dict[str, pd.DataFrame]:
+    """
+    Load model predictions from the model output directory.
+    """
+    model_output_dir = config.get_dir_path("model_output")
+    if model_stub is None:
+        return dict()
+    def get_preds_df(model_stub: str, subset: str | None = None) -> Path:
+        if subset is None:
+            preds_fp = MODEL_BASE / f"{model_stub}_constant/predictions.csv"
+        else:
+            preds_fp = MODEL_BASE / f"{model_stub}_by_{subset}/predictions.csv"
+        if not preds_fp.exists():
+            return None
+        return pd.read_csv(preds_fp).assign(
+            year = pd.col('t2'),
+            conf_mean = (1.0 - pd.col('p_mean')) * adj_factor,
+            conf_lower = (1.0 - pd.col('p_upper')) * adj_factor,
+            conf_upper = (1.0 - pd.col('p_lower')) * adj_factor,
+        )
+    preds = dict()
+    preds["constant"] = get_preds_df(model_stub)
+    for subset in OSM_KEYS:
+        preds[subset] = get_preds_df(model_stub, subset)
+    return preds
+
 
 # ----------------------------------------------------------------------------------------
 # Main workflow
 # ----------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    # Read model predictions
+    preds = get_preds_dict(MODEL_STUB, adj_factor = ADJ_FACTOR)
     # Read observations
     # Drop the first observation for each POI (when the POI was first added) - the last
     #   observation timestamp will be missing for these rows
@@ -127,6 +158,7 @@ if __name__ == "__main__":
     )
     # Format changes
     to_plot_df = pd.concat([changed_tags, unchanged_tags])
+    to_plot_df['final_obs'] = np.inf
     # Create a plot for all tags
     fig = change_plot_create(
         observations = to_plot_df,
@@ -139,6 +171,20 @@ if __name__ == "__main__":
         y_label = "Proportion remaining unchanged",
     )
     fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all")
+
+    if 'constant' in preds:
+        fig = change_plot_create(
+            observations = to_plot_df,
+            predictions = preds['constant'],
+            no_change_col = 'no_change',
+            change_col = 'change',
+            final_observation_col = 'final_obs',
+            day_range = max_days,
+            title = f"Stability of the `{TAG_KEY}` tag over time",
+            x_label = "Years since tag",
+            y_label = "Proportion remaining unchanged",
+        )
+        fig_save(fig, stub = f"osm_changes_{TAG_KEY}_all_preds")
 
     # Create multi-panel plots for the top tags in each OSM category
     TOP_N_TYPES = config.get("osm_data", "top_n_types")
@@ -159,3 +205,23 @@ if __name__ == "__main__":
             day_range = max_days,
         )
         fig_save(fig = fig, stub = f"osm_changes_{TAG_KEY}_{subtype}")
+
+        if subtype in preds:
+            top_n_tags = to_plot_df[subtype].value_counts().head(TOP_N_TYPES).index
+            pred_groups = preds[subtype]['group_name'].unique().tolist()
+            keep_preds = list(set(top_n_tags) & set(pred_groups))
+            for pred_tag in keep_preds:
+                print(f"Plotting {subtype}={pred_tag}")
+                fig = change_plot_create(
+                    observations = to_plot_df.query(f"{subtype} == @pred_tag"),
+                    predictions = preds[subtype].query(f"group_name == @pred_tag"),
+                    no_change_col = 'no_change',
+                    change_col = 'change',
+                    final_observation_col = 'final_obs',
+                    day_range = max_days,
+                    title = f"Stability of the `{TAG_KEY}` tag over time: {pred_tag}",
+                    x_label = "Years since tag",
+                    y_label = "Proportion remaining unchanged",
+                )
+                fig_save(fig, stub = f"osm_changes_{TAG_KEY}_{subtype}_preds_{pred_tag}")
+
