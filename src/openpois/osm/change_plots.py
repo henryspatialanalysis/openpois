@@ -84,11 +84,12 @@ def change_plot_reshape_data(
 
 def change_plot_create(
     observations: pd.DataFrame,
+    predictions: pd.DataFrame | None = None,
     no_change_col: str = 'no_change',
     change_col: str = 'change',
     final_observation_col: str = 'final_obs',
-    title: str = None,
-    subtitle: str = None,
+    title: str | None = None,
+    subtitle: str | None = None,
     x_label: str = '',
     y_label: str = '',
     day_range: int = 365 * 10,
@@ -99,6 +100,7 @@ def change_plot_create(
     Args:
         observations: DataFrame with observations. Each row is an iteration of a
             tag, with the three columns described below.
+        predictions: DataFrame with modeled predictions.
         no_change_col: Column name for the days elapsed from when the tag was added to
             when it was last confirmed (observed unchanged).
         change_col: Column name for the days elapsed from when the tag was added to when
@@ -122,6 +124,11 @@ def change_plot_create(
         final_observation_col = final_observation_col,
         day_range = day_range,
     )
+    if predictions is not None:
+        if subtitle is not None:
+            subtitle = f"{subtitle}\nModeled predictions in red"
+        else:
+            subtitle = "Modeled predictions in red"
     fig = (
         gg.ggplot(
             data = reshaped,
@@ -150,6 +157,20 @@ def change_plot_create(
         ) +
         gg.theme_bw()
     )
+    if predictions is not None:
+        p_renamed = predictions.assign(
+            year = pd.col('t2'),
+            y = pd.col('conf_mean'),
+            ymin = pd.col('conf_lower'),
+            ymax = pd.col('conf_upper'),
+        )
+        fig = fig + gg.geom_ribbon(
+            data = p_renamed,
+            fill = 'red', alpha = 0.25, linetype = 'dashed', color = '#444444'
+        ) + gg.geom_line(
+            data = p_renamed, color = '#444444',
+            mapping = gg.aes(x = 'year', y = 'y')
+        )
     return fig
 
 
